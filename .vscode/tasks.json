@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run API",
+      "type": "shell",
+      "command": "source .venv/bin/activate && uvicorn ceibo_finance.main:app --reload --app-dir src",
+      "isBackground": true,
+      "group": "build"
+    },
+    {
+      "label": "Run Tests",
+      "type": "shell",
+      "command": "source .venv/bin/activate && pytest -q",
+      "group": "test"
+    }
+  ]
+}

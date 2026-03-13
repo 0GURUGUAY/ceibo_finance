@@ -15,5 +15,17 @@ class Settings(BaseSettings):
     alpaca_paper: bool = True
     alpaca_data_feed: str = 'iex'
 
+    openai_api_key: str = ''
+    openai_model: str = 'gpt-4.1-mini'
+
+    anthropic_api_key: str = ''
+    anthropic_model: str = 'claude-3-5-sonnet-latest'
+
+    openrouter_api_key: str = ''
+    openrouter_model: str = 'meta-llama/llama-3.3-70b-instruct'
+
+    gemini_api_key: str = ''
+    gemini_model: str = 'gemini-1.5-flash'
+
 
 settings = Settings()

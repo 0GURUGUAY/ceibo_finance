@@ -4,7 +4,7 @@
     {
       "label": "Run API",
       "type": "shell",
-      "command": "source .venv/bin/activate && uvicorn ceibo_finance.main:app --reload --app-dir src",
+      "command": "source .venv/bin/activate && uvicorn ceibo_finance.main:app --reload --app-dir src --port 18000",
       "isBackground": true,
       "group": "build"
     },

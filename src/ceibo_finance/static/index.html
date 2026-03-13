@@ -819,6 +819,7 @@
                             </div>
                         </div>
                         <div id="activities-status" class="status">Chargement...</div>
+                        <div id="activities-realized-pnl" class="status">Marge / Perte réalisée: -</div>
                         <table>
                             <thead>
                                 <tr>
@@ -925,6 +926,59 @@
             const num = Number(value);
             if (Number.isNaN(num)) return '-';
             return `${num >= 0 ? '+' : ''}${num.toFixed(2)}${suffix}`;
+        }
+
+        function computeActivitiesRealizedPnl(activities) {
+            const lotsBySymbol = {};
+            let realizedPnl = 0;
+            let matchedSellQty = 0;
+            let unmatchedSellQty = 0;
+
+            for (const activity of [...activities].reverse()) {
+                const side = String(activity?.side || '').toLowerCase();
+                const symbol = String(activity?.symbol || '').toUpperCase();
+                const qty = Number(activity?.qty);
+                const price = Number(activity?.price);
+                if (!symbol || Number.isNaN(qty) || Number.isNaN(price) || qty <= 0 || price <= 0) {
+                    continue;
+                }
+
+                if (!lotsBySymbol[symbol]) {
+                    lotsBySymbol[symbol] = [];
+                }
+
+                if (side === 'buy') {
+                    lotsBySymbol[symbol].push({ qty, price });
+                    continue;
+                }
+
+                if (side !== 'sell') {
+                    continue;
+                }
+
+                let remaining = qty;
+                const lots = lotsBySymbol[symbol];
+                while (remaining > 0 && lots.length > 0) {
+                    const lot = lots[0];
+                    const matched = Math.min(remaining, lot.qty);
+                    realizedPnl += matched * (price - lot.price);
+                    matchedSellQty += matched;
+                    remaining -= matched;
+                    lot.qty -= matched;
+                    if (lot.qty <= 1e-9) {
+                        lots.shift();
+                    }
+                }
+                if (remaining > 0) {
+                    unmatchedSellQty += remaining;
+                }
+            }
+
+            return {
+                realizedPnl,
+                matchedSellQty,
+                unmatchedSellQty,
+            };
         }
 
         function getSignalBadgeHtml(signal) {
@@ -1205,11 +1259,26 @@
         async function loadActivities() {
             const status = document.getElementById('activities-status');
             const body = document.getElementById('activities-body');
+            const pnlBox = document.getElementById('activities-realized-pnl');
             status.textContent = 'Chargement des activités...';
+            pnlBox.textContent = 'Marge / Perte réalisée: calcul en cours...';
 
             try {
-                const payload = await fetchJson(`${apiBase}/activities?limit=120&apply_purge=${activitiesPurgeFilterEnabled ? '1' : '0'}`);
-                const activities = Array.isArray(payload?.activities) ? payload.activities : [];
+                let payload = await fetchJson(`${apiBase}/activities?limit=120&apply_purge=${activitiesPurgeFilterEnabled ? '1' : '0'}`);
+                let activities = Array.isArray(payload?.activities) ? payload.activities : [];
+                let autoResetNote = '';
+
+                if (!activities.length && activitiesPurgeFilterEnabled) {
+                    const unfilteredPayload = await fetchJson(`${apiBase}/activities?limit=120&apply_purge=0`);
+                    const unfilteredActivities = Array.isArray(unfilteredPayload?.activities) ? unfilteredPayload.activities : [];
+                    if (unfilteredActivities.length) {
+                        activitiesPurgeFilterEnabled = false;
+                        payload = unfilteredPayload;
+                        activities = unfilteredActivities;
+                        autoResetNote = ' Filtre purge désactivé automatiquement.';
+                    }
+                }
+
                 body.innerHTML = '';
 
                 for (const activity of activities) {
@@ -1231,12 +1300,19 @@
                     body.appendChild(empty);
                 }
 
+                const realized = computeActivitiesRealizedPnl(activities);
+                const unmatchedText = realized.unmatchedSellQty > 0
+                    ? ` · ${realized.unmatchedSellQty.toFixed(6)} qty sell non appariée(s)`
+                    : '';
+                pnlBox.textContent = `Marge / Perte réalisée (estimée): ${formatSignedNumber(realized.realizedPnl, ' USD')} · qty vendue appariée: ${realized.matchedSellQty.toFixed(6)}${unmatchedText}`;
+
                 const purgeText = payload?.purged_before
                     ? ` · purge locale active depuis ${formatShortTimestamp(payload.purged_before)}`
                     : '';
-                status.textContent = `Activités affichées: ${activities.length}${purgeText}. Suppression définitive broker non autorisée.`;
+                status.textContent = `Activités affichées: ${activities.length}${purgeText}. Suppression définitive broker non autorisée.${autoResetNote}`;
             } catch (error) {
                 status.textContent = `Chargement activités impossible: ${error.message}`;
+                pnlBox.textContent = 'Marge / Perte réalisée: indisponible';
             }
         }
 

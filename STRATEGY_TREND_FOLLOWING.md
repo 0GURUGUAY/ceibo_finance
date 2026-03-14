@@ -71,11 +71,14 @@ Si la tendance journalière n’est pas positive: sortie complète directe.
 
 ## 5) Rebuy automatique après sortie gagnante
 Après une **sortie complète** avec `pnl_usd > 0`:
-- rachat automatique de la même quantité (`positive_exit_rebuy`).
+- le profit est conservé dans une réserve interne `savings_usd`,
+- le rachat automatique (`positive_exit_rebuy`) réinvestit uniquement le **coût d'entrée initial** de la portion vendue,
+- la quantité rachetée peut donc être différente de la quantité vendue si le prix a évolué.
 
 Important:
 - pas de rebuy sur sortie perdante,
 - pas de rebuy sur sortie partielle.
+- le statut expose désormais `realized_margin_usd` et `savings_usd`.
 
 ---
 
@@ -92,6 +95,8 @@ Si indisponible, fallback sur quantité locale.
 - entrées/sorties,
 - TP/SL/reversal,
 - rebuy `OK/KO`,
+- marge réalisée globale,
+- épargne cumulée (`savings_usd`),
 - PnL cumulé par symbole,
 - vérifications de vente en cours (`hits/required` par symbole).
 
@@ -102,6 +107,8 @@ Le log affiche les événements décisionnels (pas seulement les ordres):
 - entrées/sorties et motif,
 - skips (budget/qty),
 - erreurs.
+
+Les événements `exit` et `rebuy_after_positive_exit` incluent aussi des informations de capital utiles (`entry_cost_usd`, `savings_usd`).
 
 Un message de vie périodique confirme que la boucle tourne même sans trade.
 

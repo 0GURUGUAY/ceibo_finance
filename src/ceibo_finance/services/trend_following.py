@@ -44,6 +44,7 @@ class TrendFollowingState:
     positive_trend_partial_exit_stage: dict[str, int] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
     realized_margin_usd: float = 0.0
+    savings_usd: float = 0.0
 
 
 class TrendFollowingService:
@@ -71,6 +72,7 @@ class TrendFollowingService:
                 positive_trend_partial_exit_stage={},
                 events=[],
                 realized_margin_usd=0.0,
+                savings_usd=0.0,
             )
             self._daily_trend_cache = {}
             self._append_event('strategy_started', {'config': self._config_to_dict(sanitized)})
@@ -104,6 +106,7 @@ class TrendFollowingService:
             'invested_usd': round(invested, 2),
             'available_investable_usd': round(available, 2),
             'realized_margin_usd': round(self.state.realized_margin_usd, 2),
+            'savings_usd': round(self.state.savings_usd, 2),
             'simulation_mode': bool(config.simulation_mode) if config else False,
             'monitoring': monitoring,
             'positions': {
@@ -359,6 +362,7 @@ class TrendFollowingService:
         await self._place_order(symbol=symbol, qty=exit_qty, side='sell', reason=reason)
         pnl_usd = (price - position.entry_price) * exit_qty
         pnl_pct = ((price - position.entry_price) / position.entry_price) * 100 if position.entry_price else 0.0
+        entry_cost_usd = round(position.entry_price * exit_qty, 4)
         self.state.realized_margin_usd += pnl_usd
         estimated_remaining_qty = max(0.0, round(live_qty - exit_qty, 6))
         is_partial = estimated_remaining_qty > 0
@@ -375,7 +379,9 @@ class TrendFollowingService:
                 'is_partial': is_partial,
                 'pnl_pct': round(pnl_pct, 2),
                 'pnl_usd': round(pnl_usd, 2),
+                'entry_cost_usd': round(entry_cost_usd, 4),
                 'realized_margin_usd': round(self.state.realized_margin_usd, 2),
+                'savings_usd': round(self.state.savings_usd + (pnl_usd if pnl_usd > 0 and not is_partial else 0.0), 2),
             },
         )
         self.state.sell_signal_hits.pop(symbol, None)
@@ -388,8 +394,11 @@ class TrendFollowingService:
         elif symbol in self.state.positions:
             del self.state.positions[symbol]
 
+        if not is_partial and pnl_usd > 0:
+            self.state.savings_usd += pnl_usd
+
         if allow_rebuy and not is_partial and pnl_usd > 0:
-            await self._rebuy_after_positive_exit(symbol=symbol, qty=exit_qty, price=price)
+            await self._rebuy_after_positive_exit(symbol=symbol, entry_cost_usd=entry_cost_usd, price=price)
 
     async def _resolve_live_exit_qty(self, symbol: str, fallback_qty: float) -> float:
         try:
@@ -446,9 +455,14 @@ class TrendFollowingService:
         }
         return required_hits, daily_trend_pct
 
-    async def _rebuy_after_positive_exit(self, symbol: str, qty: float, price: float) -> None:
+    async def _rebuy_after_positive_exit(self, symbol: str, entry_cost_usd: float, price: float) -> None:
         config = self.state.config
-        if not config:
+        if not config or price <= 0:
+            return
+
+        # Reinvest only the original entry cost — profit stays in savings
+        qty = round(entry_cost_usd / price, 6)
+        if qty <= 0:
             return
 
         try:
@@ -466,6 +480,8 @@ class TrendFollowingService:
                     'symbol': symbol,
                     'qty': round(qty, 6),
                     'entry_price': round(price, 4),
+                    'entry_cost_usd': round(entry_cost_usd, 4),
+                    'savings_usd': round(self.state.savings_usd, 2),
                 },
             )
         except Exception as exc:
@@ -658,7 +674,9 @@ class TrendFollowingService:
         return total
 
     def _append_event(self, event_type: str, payload: dict[str, Any]) -> None:
+        import uuid
         event = {
+            'event_id': str(uuid.uuid4()),
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'event': event_type,
             'payload': self._json_safe(payload),

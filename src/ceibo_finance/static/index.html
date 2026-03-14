@@ -1892,6 +1892,10 @@
             }
 
             if (eventName === 'order_sent' || eventName === 'order_simulated') {
+                // sell orders are already shown by the 'exit' event (richer with pnl)
+                if (String(payload?.side || '').toLowerCase() === 'sell') {
+                    return null;
+                }
                 const side = String(payload?.side || '').toUpperCase();
                 return `${side || 'ORDER'} ${symbol || '-'} qty=${qty ?? '-'} · motif=${reason || '-'}${eventName === 'order_simulated' ? ' (SIM)' : ''}`;
             }
@@ -1949,16 +1953,25 @@
             if (!events.length) {
                 return;
             }
+            // Collect new events in chronological order, then display newest-first
+            const newFormatted = [];
             for (const eventItem of events) {
-                const eventKey = `${eventItem?.timestamp || ''}|${eventItem?.event || ''}|${JSON.stringify(eventItem?.payload || {})}`;
+                // Prefer stable event_id if present, fall back to content hash
+                const eventKey = eventItem?.event_id
+                    ? `id:${eventItem.event_id}`
+                    : `${eventItem?.timestamp || ''}|${eventItem?.event || ''}|${JSON.stringify(eventItem?.payload || {})}`;
                 if (!eventKey || trendFollowingLoggedEventKeys.has(eventKey)) {
                     continue;
                 }
                 rememberTrendFollowingLoggedEvent(eventKey);
                 const formatted = formatTrendFollowingEventForLog(eventItem);
                 if (formatted) {
-                    appendTrendFollowingLog(formatted);
+                    newFormatted.push(formatted);
                 }
+            }
+            // Append newest first so the log reads top=latest
+            for (let i = newFormatted.length - 1; i >= 0; i--) {
+                appendTrendFollowingLog(newFormatted[i]);
             }
         }
 
@@ -1993,11 +2006,12 @@
             const invested = Number(statusPayload?.invested_usd || 0).toFixed(2);
             const available = Number(statusPayload?.available_investable_usd || 0).toFixed(2);
             const margin = Number(statusPayload?.realized_margin_usd || 0).toFixed(2);
+            const savings = Number(statusPayload?.savings_usd || 0).toFixed(2);
             const mode = statusPayload?.simulation_mode ? 'simulation' : 'paper-live';
             const refreshEvery = Number(statusPayload?.config?.universe_refresh_seconds || 60);
             status.textContent = running
-                ? `Stratégie active (${mode}) · Symbols: ${symbols || '-'} · Positions bot: ${positionsCount} · Vérif vente: ${sellCheckSummary} · Capital: ${capital}$ · Investi: ${invested}$ · Dispo: ${available}$ · Marge réalisée: ${margin}$ · Universe refresh: ${refreshEvery}s`
-                : `Stratégie arrêtée · Capital: ${capital}$ · Marge réalisée: ${margin}$`;
+                ? `Stratégie active (${mode}) · Symbols: ${symbols || '-'} · Positions bot: ${positionsCount} · Vérif vente: ${sellCheckSummary} · Capital: ${capital}$ · Investi: ${invested}$ · Dispo: ${available}$ · Marge réalisée: ${margin}$ · Épargne: ${savings}$ · Universe refresh: ${refreshEvery}s`
+                : `Stratégie arrêtée · Capital: ${capital}$ · Marge réalisée: ${margin}$ · Épargne: ${savings}$`;
 
             maybeLogTrendFollowingNewEvents(statusPayload);
             renderTrendFollowingMonitoring(statusPayload?.monitoring || {}, statusPayload?.sell_signal_hits || {});

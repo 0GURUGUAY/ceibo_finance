@@ -71,11 +71,14 @@ Si la tendencia diaria no es positiva: salida completa directa.
 
 ## 5) Recompra automática tras una salida ganadora
 Después de una **salida completa** con `pnl_usd > 0`:
-- recompra automática de la misma cantidad (`positive_exit_rebuy`).
+- la ganancia se conserva en una reserva interna `savings_usd`,
+- la recompra automática (`positive_exit_rebuy`) reinvierte solo el **coste de entrada original** de la parte vendida,
+- la cantidad recomprada puede ser distinta de la cantidad vendida si el precio cambió.
 
 Importante:
 - no hay recompra en salida perdedora,
 - no hay recompra en salida parcial.
+- el estado expone ahora `realized_margin_usd` y `savings_usd`.
 
 ---
 
@@ -92,6 +95,8 @@ Si no está disponible, usa fallback con la cantidad local.
 - entradas/salidas,
 - TP/SL/reversal,
 - recompra `OK/KO`,
+- margen realizada global,
+- ahorro acumulado (`savings_usd`),
 - PnL acumulado por símbolo,
 - verificaciones de venta en curso (`hits/required` por símbolo).
 
@@ -102,6 +107,8 @@ El log muestra eventos de decisión (no solo órdenes):
 - entradas/salidas y motivo,
 - skips (presupuesto/cantidad),
 - errores.
+
+Los eventos `exit` y `rebuy_after_positive_exit` incluyen también datos útiles de capital (`entry_cost_usd`, `savings_usd`).
 
 Un mensaje de vida periódico confirma que el loop sigue activo incluso sin trades.
 

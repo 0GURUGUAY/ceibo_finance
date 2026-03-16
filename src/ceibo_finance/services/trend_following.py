@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import WebSocket
 
 from ceibo_finance.services.alpaca_client import alpaca_service
+from ceibo_finance.services.strategy_history import strategy_history_service
 
 
 @dataclass
@@ -49,6 +50,7 @@ class TrendFollowingState:
     events: list[dict[str, Any]] = field(default_factory=list)
     realized_margin_usd: float = 0.0
     savings_usd: float = 0.0
+    paused_symbols: set[str] = field(default_factory=set)
 
 
 class TrendFollowingService:
@@ -103,6 +105,21 @@ class TrendFollowingService:
                 self._task = None
             return self.status()
 
+    def pause_symbol(self, symbol: str) -> dict:
+        normalized = str(symbol or '').strip().upper()
+        if not normalized:
+            return self.status()
+        self.state.paused_symbols.add(normalized)
+        self.state.sell_signal_hits.pop(normalized, None)
+        self._append_event('symbol_paused', {'symbol': normalized})
+        return self.status()
+
+    def resume_symbol(self, symbol: str) -> dict:
+        normalized = str(symbol or '').strip().upper()
+        self.state.paused_symbols.discard(normalized)
+        self._append_event('symbol_resumed', {'symbol': normalized})
+        return self.status()
+
     def status(self) -> dict:
         config = self.state.config
         invested = self._invested_notional_usd()
@@ -115,6 +132,7 @@ class TrendFollowingService:
             'started_at': self.state.started_at,
             'config': self._config_to_dict(config) if config else None,
             'symbols': config.symbols if config else [],
+            'paused_symbols': sorted(self.state.paused_symbols),
             'capital_usd': round(capital, 2),
             'invested_usd': round(invested, 2),
             'available_investable_usd': round(available, 2),
@@ -165,9 +183,26 @@ class TrendFollowingService:
     async def _run_loop(self) -> None:
         try:
             last_universe_refresh = 0.0
+            market_seen_open = False
             while self.state.running and self.state.config:
                 loop_started = asyncio.get_running_loop().time()
                 config = self.state.config
+                market_clock = await asyncio.to_thread(alpaca_service.get_market_clock)
+                market_is_open = market_clock.get('is_open')
+                if market_is_open is True:
+                    market_seen_open = True
+                elif market_seen_open and market_is_open is False:
+                    self._append_event(
+                        'strategy_stopped_market_closed',
+                        {
+                            'reason': 'market_closed',
+                            'next_open': str(market_clock.get('next_open') or ''),
+                            'next_close': str(market_clock.get('next_close') or ''),
+                        },
+                    )
+                    self.state.running = False
+                    await self._broadcast({'type': 'stopped', 'payload': self.status()})
+                    return
                 now_monotonic = asyncio.get_running_loop().time()
                 if config.use_current_positions and (now_monotonic - last_universe_refresh >= config.universe_refresh_seconds):
                     await self._refresh_universe_from_positions()
@@ -259,7 +294,7 @@ class TrendFollowingService:
                         },
                     )
                     return
-                await self._place_order(symbol=symbol, qty=qty, side='buy', reason='trend_entry')
+                order_id = await self._place_order(symbol=symbol, qty=qty, side='buy', reason='trend_entry')
                 self.state.positions[symbol] = PositionState(
                     qty=qty,
                     entry_price=price,
@@ -271,6 +306,7 @@ class TrendFollowingService:
                         'symbol': symbol,
                         'price': round(price, 4),
                         'qty': round(qty, 6),
+                        'order_id': order_id,
                         'short_ma': round(short_ma, 4),
                         'long_ma': round(long_ma, 4),
                     },
@@ -404,7 +440,7 @@ class TrendFollowingService:
         if exit_qty <= 0:
             return
 
-        await self._place_order(symbol=symbol, qty=exit_qty, side='sell', reason=reason)
+        order_id = await self._place_order(symbol=symbol, qty=exit_qty, side='sell', reason=reason)
         pnl_usd = (price - position.entry_price) * exit_qty
         pnl_pct = ((price - position.entry_price) / position.entry_price) * 100 if position.entry_price else 0.0
         entry_cost_usd = round(position.entry_price * exit_qty, 4)
@@ -420,6 +456,7 @@ class TrendFollowingService:
                 'entry_price': round(position.entry_price, 4),
                 'exit_price': round(price, 4),
                 'qty': round(exit_qty, 6),
+                'order_id': order_id,
                 'estimated_remaining_qty': estimated_remaining_qty,
                 'is_partial': is_partial,
                 'pnl_pct': round(pnl_pct, 2),
@@ -538,7 +575,7 @@ class TrendFollowingService:
             return
 
         try:
-            await self._place_order(symbol=symbol, qty=qty, side='buy', reason='positive_exit_rebuy')
+            order_id = await self._place_order(symbol=symbol, qty=qty, side='buy', reason='positive_exit_rebuy')
             self.state.positions[symbol] = PositionState(
                 qty=qty,
                 entry_price=price,
@@ -551,6 +588,7 @@ class TrendFollowingService:
                 {
                     'symbol': symbol,
                     'qty': round(qty, 6),
+                    'order_id': order_id,
                     'entry_price': round(price, 4),
                     'entry_cost_usd': round(entry_cost_usd, 4),
                     'savings_usd': round(self.state.savings_usd, 2),
@@ -704,7 +742,7 @@ class TrendFollowingService:
                 continue
 
             try:
-                await self._place_order(symbol=symbol, qty=qty, side='buy', reason='loss_reentry_after_delay')
+                order_id = await self._place_order(symbol=symbol, qty=qty, side='buy', reason='loss_reentry_after_delay')
                 self.state.positions[symbol] = PositionState(
                     qty=round(qty, 6),
                     entry_price=round(current_price_value, 6),
@@ -718,6 +756,7 @@ class TrendFollowingService:
                     {
                         'symbol': symbol,
                         'qty': round(qty, 6),
+                        'order_id': order_id,
                         'sell_price': round(sell_price, 4),
                         'buy_price': round(current_price_value, 4),
                         'trend_since_exit_pct': round(trend_since_exit_pct, 2),
@@ -763,10 +802,10 @@ class TrendFollowingService:
                 return True
         return False
 
-    async def _place_order(self, symbol: str, qty: float, side: str, reason: str) -> None:
+    async def _place_order(self, symbol: str, qty: float, side: str, reason: str) -> Optional[str]:
         config = self.state.config
         if not config:
-            return
+            return None
 
         if config.simulation_mode:
             order_id = f'SIM-{int(datetime.now(timezone.utc).timestamp() * 1000)}'
@@ -780,7 +819,7 @@ class TrendFollowingService:
                     'order_id': order_id,
                 },
             )
-            return
+            return order_id
 
         try:
             result = await asyncio.to_thread(alpaca_service.place_market_order, symbol, qty, side)
@@ -795,6 +834,7 @@ class TrendFollowingService:
                     'order_id': order_id,
                 },
             )
+            return None if order_id is None else str(order_id)
         except Exception as exc:
             self._append_event(
                 'order_error',
@@ -924,7 +964,7 @@ class TrendFollowingService:
         for symbol in configured + open_positions:
             if symbol and symbol not in merged:
                 merged.append(symbol)
-        return merged
+        return [s for s in merged if s not in self.state.paused_symbols]
 
     def _compute_entry_qty(self, symbol: str, price: float) -> float:
         config = self.state.config
@@ -995,9 +1035,71 @@ class TrendFollowingService:
             'event': event_type,
             'payload': self._json_safe(payload),
         }
+        self._store_event(event)
+        self._persist_trade_history(event)
+
+    def _store_event(self, event: dict[str, Any]) -> None:
         self.state.events.append(event)
         if len(self.state.events) > 300:
             self.state.events = self.state.events[-300:]
+
+    def _persist_trade_history(self, event: dict[str, Any]) -> None:
+        trade_record = self._build_trade_history_record(event)
+        if not trade_record:
+            return
+        try:
+            strategy_history_service.record_trade(trade_record)
+        except Exception:
+            return
+
+    def _build_trade_history_record(self, event: dict[str, Any]) -> Optional[dict[str, Any]]:
+        event_type = str(event.get('event') or '')
+        payload_raw = event.get('payload')
+        payload = payload_raw if isinstance(payload_raw, dict) else {}
+        symbol = str(payload.get('symbol') or '').strip().upper()
+        qty = self._to_positive_float(payload.get('qty'))
+
+        side: Optional[str] = None
+        price: Optional[float] = None
+        reason: str = ''
+
+        if event_type == 'entry':
+            side = 'buy'
+            price = self._to_positive_float(payload.get('price'))
+            reason = 'trend_entry'
+        elif event_type == 'rebuy_after_positive_exit':
+            side = 'buy'
+            price = self._to_positive_float(payload.get('entry_price'))
+            reason = 'positive_exit_rebuy'
+        elif event_type == 'loss_reentry_executed':
+            side = 'buy'
+            price = self._to_positive_float(payload.get('buy_price'))
+            reason = 'loss_reentry_after_delay'
+        elif event_type == 'exit':
+            side = 'sell'
+            price = self._to_positive_float(payload.get('exit_price'))
+            reason = str(payload.get('reason') or 'exit')
+
+        if not symbol or not side or qty is None or price is None:
+            return None
+
+        config = self.state.config
+        return {
+            'event_id': str(event.get('event_id') or ''),
+            'recorded_at': str(event.get('timestamp') or ''),
+            'strategy_name': 'trend_following',
+            'source_event': event_type,
+            'side': side,
+            'symbol': symbol,
+            'qty': round(qty, 6),
+            'price': round(price, 6),
+            'reason': reason,
+            'order_id': payload.get('order_id'),
+            'simulation_mode': bool(config.simulation_mode) if config else False,
+            'pnl_usd': payload.get('pnl_usd'),
+            'pnl_pct': payload.get('pnl_pct'),
+            'metadata': payload,
+        }
 
     @classmethod
     def _json_safe(cls, value: Any) -> Any:

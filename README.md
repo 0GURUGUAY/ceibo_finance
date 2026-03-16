@@ -156,6 +156,27 @@ Variables `.env` à définir pour la prod:
 - `VIEWER_ADMIN_KEY` (clé admin requise pour générer les liens invités)
 - `VIEWER_TOKEN_DEFAULT_TTL_MINUTES` (durée par défaut d'un lien)
 
+## Historique persistant des achats / ventes stratégie
+
+Les achats/ventes générés par la stratégie Trend Following sont désormais stockés localement en SQLite, indépendamment des activités Alpaca.
+
+Configuration `.env`:
+
+- `STRATEGY_HISTORY_DB_PATH=data/strategy_history.db`
+
+Endpoint de consultation:
+
+- `GET /api/v1/strategy/trend-following/history?limit=200`
+- filtres disponibles: `symbol=AAPL`, `side=buy|sell`
+
+Exemple:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/strategy/trend-following/history?limit=100&symbol=AAPL"
+```
+
+La réponse retourne l'historique persistant des trades système avec `qty`, `price`, `reason`, `pnl_usd`, `pnl_pct`, `simulation_mode` et le payload source complet.
+
 Exemple de génération d'un secret fort (macOS/Linux):
 
 ```bash

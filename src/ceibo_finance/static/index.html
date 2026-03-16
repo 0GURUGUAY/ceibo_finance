@@ -241,6 +241,31 @@
             font-weight: 600;
         }
 
+        .tab-button-activities {
+            border-color: #2f9e6b;
+            color: #d6ffe7;
+        }
+
+        .tab-button-activities.active {
+            background: #2f9e6b;
+            border-color: #2f9e6b;
+            color: #0d1c14;
+            font-weight: 700;
+        }
+
+        .tab-button-ia-running {
+            background: #b34141;
+            border-color: #ff6b6b;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .tab-button-ia-running.active {
+            background: #e05252;
+            border-color: #ff6b6b;
+            color: #fff;
+        }
+
         .tab-panel {
             display: none;
         }
@@ -290,10 +315,41 @@
             border-color: #5b6ea6;
         }
 
+        .positions-action-cell {
+            width: 1%;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        .positions-action-button {
+            padding: 5px 8px;
+            font-size: 0.78rem;
+            line-height: 1;
+        }
+
+        .pause-symbol-button {
+            background: #3a2020;
+            border-color: #b34141;
+            color: #ffd6d6;
+            font-weight: 700;
+        }
+
+        .pause-symbol-button:hover {
+            border-color: #ff7b7b;
+            background: #4a2525;
+        }
+
         .button-primary {
             background: #2a5bff;
             border-color: #2a5bff;
             font-weight: 600;
+        }
+
+        .button-danger {
+            background: #b34141;
+            border-color: #b34141;
+            color: #ffe8e8;
+            font-weight: 700;
         }
 
         button:disabled {
@@ -323,86 +379,6 @@
 
         .status-details {
             white-space: pre-wrap;
-        }
-
-        .llm-traffic-popup {
-            position: fixed;
-            right: 16px;
-            bottom: 64px;
-            width: min(420px, calc(100vw - 24px));
-            max-height: 52vh;
-            overflow: auto;
-            background: rgba(13, 20, 39, 0.95);
-            border: 1px solid #2a5bff;
-            border-radius: 12px;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-            padding: 10px 12px;
-            z-index: 999;
-            display: none;
-        }
-
-        .llm-traffic-popup.visible {
-            display: block;
-        }
-
-        .llm-traffic-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            color: #d8e2ff;
-        }
-
-        .llm-traffic-header-actions {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .llm-traffic-clear-btn {
-            border: 1px solid #3453b8;
-            background: #182447;
-            color: #dce6ff;
-            border-radius: 6px;
-            font-size: 0.74rem;
-            padding: 4px 8px;
-            cursor: pointer;
-        }
-
-        .llm-traffic-clear-btn:hover {
-            background: #21305d;
-        }
-
-        .llm-traffic-item {
-            border: 1px solid #33406b;
-            border-radius: 8px;
-            padding: 7px 8px;
-            margin-bottom: 6px;
-            background: #111831;
-            font-size: 0.84rem;
-        }
-
-        .llm-traffic-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .llm-traffic-item.pending {
-            border-color: #5b7cff;
-        }
-
-        .llm-traffic-item.ok {
-            border-color: #2f9e6b;
-        }
-
-        .llm-traffic-item.error {
-            border-color: #b34141;
-        }
-
-        .llm-traffic-meta {
-            color: #9eb2ea;
-            font-size: 0.78rem;
-            margin-top: 3px;
         }
 
         .analysis-summary-card {
@@ -784,7 +760,7 @@
 
         .quote-chart {
             width: 100%;
-            height: 80px;
+            height: 180px;
             border: 1px solid #2a3558;
             border-radius: 8px;
             background: #0f1529;
@@ -907,10 +883,10 @@
             </div>
             <button id="tab-account" class="tab-button active">Compte</button>
             <button id="tab-trading" class="tab-button">Trading</button>
+            <button id="tab-activities" class="tab-button tab-button-activities">Activités</button>
             <button id="tab-ia" class="tab-button">IA</button>
             <button id="tab-research" class="tab-button">Recherche</button>
             <button id="tab-antifragile" class="tab-button">Antifragile</button>
-            <button id="tab-activities" class="tab-button">Activités</button>
         </nav>
         <main class="container">
             <div class="global-ticker-wrap" aria-live="polite">
@@ -921,7 +897,10 @@
                     <article class="card">
                         <div class="row" style="justify-content: space-between; align-items: center;">
                             <h2>Compte</h2>
-                            <button id="refresh-account">Rafraîchir</button>
+                            <div class="row">
+                                <button id="refresh-account">Rafraîchir</button>
+                                <button id="reset-positions" class="button-danger">RESET</button>
+                            </div>
                         </div>
                         <div id="account-gains-summary" class="status">Somme des gains: -</div>
                         <div id="account-output" class="account-grid">Chargement...</div>
@@ -945,7 +924,10 @@
                                     <th>Market Value</th>
                                     <th>Unrealized P/L</th>
                                     <th>Variation en %</th>
+                                    <th>SL</th>
                                     <th>IA</th>
+                                    <th>Act.</th>
+                                    <th>Pause</th>
                                 </tr>
                             </thead>
                             <tbody id="positions-body"></tbody>
@@ -953,7 +935,6 @@
                         </table>
                         <div id="position-analysis-output" class="status"></div>
                         <div id="position-analysis-details" class="status status-details"></div>
-                        <div id="position-movements-output" class="status status-details"></div>
                     </article>
 
                     <article class="card">
@@ -1163,18 +1144,26 @@
             </section>
 
             <section id="panel-activities" class="tab-panel">
-                <div class="grid account-panel-wrap" style="width: 100%; max-width: 1000px;">
+                <div class="grid account-panel-wrap" style="width: 100%;">
                     <article class="card">
                         <div class="row" style="justify-content: space-between; align-items: center;">
-                            <h2 style="margin: 0;">Activités Alpaca</h2>
-                            <div class="row">
+                            <h2 style="margin: 0;">Activités Alpaca (trades réels)</h2>
+                            <div class="row" style="gap:6px; align-items:center;">
+                                <input id="activities-symbol-filter" placeholder="Filtrer par symbol..."
+                                    style="width:140px; font-size:0.85em;" autocomplete="off" />
+                                <button id="activities-clear-filter" title="Effacer le filtre"
+                                    style="display:none; background:#3a2020; border-color:#b34141; color:#ffaaaa;">✕
+                                    Reset filtre</button>
+                                <button id="purge-activities" class="button-danger"
+                                    title="Masquer les logs d'activités déjà vus dans l'application">DELETE
+                                    logs</button>
+                                <button id="reset-activities-purge"
+                                    title="Réafficher les logs d'activités purgés localement">Restaurer logs</button>
                                 <button id="refresh-activities">Rafraîchir</button>
-                                <button id="purge-activities">Tout détruire (local)</button>
-                                <button id="reset-activities-purge">Restaurer</button>
                             </div>
                         </div>
                         <div id="activities-status" class="status">Chargement...</div>
-                        <div id="activities-realized-pnl" class="status">Marge / Perte réalisée: -</div>
+                        <div id="activities-realized-pnl" class="status" style="margin-top:4px;"></div>
                         <table>
                             <thead>
                                 <tr>
@@ -1189,6 +1178,32 @@
                             <tbody id="activities-body"></tbody>
                         </table>
                     </article>
+                    <article class="card">
+                        <div class="row" style="justify-content: space-between; align-items: center;">
+                            <h2 style="margin: 0;">Historique système (persistant)</h2>
+                            <div class="row">
+                                <button id="refresh-strategy-history">Rafraîchir</button>
+                                <button id="clear-strategy-history" class="button-danger">DELETE table</button>
+                                <button id="export-strategy-history-csv">Exporter CSV</button>
+                                <button id="export-strategy-history-pdf">Exporter PDF</button>
+                            </div>
+                        </div>
+                        <div id="strategy-history-status" class="status">Chargement...</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Horodatage</th>
+                                    <th>Side</th>
+                                    <th>Symbol</th>
+                                    <th>Qty</th>
+                                    <th>Prix</th>
+                                    <th>Reason</th>
+                                    <th>PnL USD</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategy-history-body"></tbody>
+                        </table>
+                    </article>
                 </div>
             </section>
         </main>
@@ -1198,17 +1213,6 @@
             style="margin-left: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;"></span>
     </footer>
 
-    <div id="llm-traffic-popup" class="llm-traffic-popup" aria-live="polite">
-        <div class="llm-traffic-header">
-            <strong id="llm-traffic-title">Trafic LLM / V2</strong>
-            <div class="llm-traffic-header-actions">
-                <span id="llm-traffic-count">0 en cours</span>
-                <button id="llm-traffic-clear-btn" class="llm-traffic-clear-btn" type="button">Purger</button>
-            </div>
-        </div>
-        <div id="llm-traffic-list"></div>
-    </div>
-
     <script>
         const apiBase = '/api/v1';
         const APP_VERSION = '0.2.12';
@@ -1217,13 +1221,11 @@
         const quoteTimeHistoryBySymbol = {};
         const positionsLastSeenBySymbol = {};
         const soldPositionsBySymbol = {};
-        let selectedPortfolioSymbol = '';
         let iaOpportunitiesLastResult = null;
         const positionsTotalHistory = [];
         const positionsTotalHistoryMax = 24;
         const positionsTotalHistoryStorageKey = 'ceibo-finance.positions-total-history';
         const soldPositionsStorageKey = 'ceibo-finance.sold-positions';
-        const selectedPortfolioSymbolStorageKey = 'ceibo-finance.selected-portfolio-symbol';
         const v2SelectedSymbolsStorageKey = 'ceibo-finance.v2-selected-symbols';
         const quoteHistoryMax = 40;
         const quoteAutoRefreshMs = 5000;
@@ -1274,6 +1276,9 @@
         let iaV2AutoStatusLoadInFlight = false;
         let iaV2AutoStatusSnapshot = null;
         let activitiesPurgeFilterEnabled = false;
+        let strategyHistoryLastRecords = [];
+        let portfolioTickerSnapshot = [];
+        const strategyHistoryCollapsedSymbols = new Set();
         let quoteInitializedFromPositions = false;
         const v2SelectedSymbols = new Set();
         const globalTickerRefreshMs = 90000;
@@ -1289,11 +1294,6 @@
         ];
         const languageStorageKey = 'ceibo-finance.ui-language';
         let currentLanguage = 'fr';
-        const llmTrafficMonitor = {
-            active: new Map(),
-            recent: [],
-            maxRecent: 14,
-        };
 
         const i18n = {
             fr: {
@@ -1476,8 +1476,6 @@
             setText('tab-antifragile', t('tab_antifragile'));
             setText('tab-activities', t('tab_activities'));
             setText('app-footer-label', t('app_version'));
-            setText('llm-traffic-title', t('traffic_title'));
-            setText('llm-traffic-clear-btn', t('traffic_purge'));
             setText('tf-title', tf('Trend Following (TP 0.4% / SL 0.4%)', 'Seguimiento de tendencia (TP 0.4% / SL 0.4%)'));
             setText('tf-symbols-label', tf('Univers manuel (optionnel, vide = lignes actuelles)', 'Universo manual (opcional, vacío = posiciones actuales)'));
             setText('tf-capital-label', tf('Capital investi fixe (USD)', 'Capital fijo invertido (USD)'));
@@ -1513,6 +1511,7 @@
                 ['h2', 'V2 · LLM privé (US)', t('v2_private_llm')],
                 ['h2', 'Antifragile Backtest', currentLanguage === 'es' ? 'Backtest Antifrágil' : 'Antifragile Backtest'],
                 ['h2', 'Activités Alpaca', t('alpaca_activities')],
+                ['h2', 'Historique système (persistant)', currentLanguage === 'es' ? 'Historial sistema (persistente)' : 'Historique système (persistant)'],
                 ['h3', 'Sélection V2 pour la stratégie', t('v2_selection_for_strategy')],
                 ['label', 'Symbole', currentLanguage === 'es' ? 'Símbolo' : 'Symbole'],
                 ['label', 'Quantité', currentLanguage === 'es' ? 'Cantidad' : 'Quantité'],
@@ -1548,6 +1547,7 @@
                 ['button', 'Vider sélection', t('v2_clear_selection')],
                 ['button', 'Lancer backtest', currentLanguage === 'es' ? 'Lanzar backtest' : 'Lancer backtest'],
                 ['button', 'Exporter PDF', currentLanguage === 'es' ? 'Exportar PDF' : 'Exporter PDF'],
+                ['button', 'Exporter CSV', currentLanguage === 'es' ? 'Exportar CSV' : 'Exporter CSV'],
                 ['button', 'Tout détruire (local)', t('purge_local')],
                 ['button', 'Restaurer', t('restore')],
                 ['th', 'Signal', currentLanguage === 'es' ? 'Variación %' : 'Variation en %'],
@@ -1555,6 +1555,8 @@
                 ['th', 'Horodatage', currentLanguage === 'es' ? 'Fecha/hora' : 'Horodatage'],
                 ['th', 'Type', currentLanguage === 'es' ? 'Tipo' : 'Type'],
                 ['th', 'Prix', currentLanguage === 'es' ? 'Precio' : 'Prix'],
+                ['th', 'Reason', currentLanguage === 'es' ? 'Motivo' : 'Reason'],
+                ['th', 'Side', 'Side'],
             ];
 
             staticTextMap.forEach(([selector, fromText, toText]) => {
@@ -1575,244 +1577,11 @@
                 activitiesPnl.textContent = t('realized_pnl');
             }
 
-            renderLlmTrafficPopup();
-        }
-
-        function toTrafficPreview(value, maxLen = 50) {
-            const limit = Math.max(1, Number(maxLen) || 50);
-            const compactText = (raw) => String(raw || '').replace(/\s+/g, ' ').trim();
-
-            const safeToString = (raw) => {
-                try {
-                    return JSON.stringify(raw);
-                } catch {
-                    return String(raw ?? '');
-                }
-            };
-
-            const pushIfPresent = (parts, label, rawValue) => {
-                if (rawValue === null || rawValue === undefined || rawValue === '') {
-                    return;
-                }
-                let token = '';
-                if (typeof rawValue === 'number') {
-                    token = Number.isInteger(rawValue) ? `${rawValue}` : rawValue.toFixed(2);
-                } else if (typeof rawValue === 'boolean') {
-                    token = rawValue ? 'true' : 'false';
-                } else {
-                    token = compactText(String(rawValue));
-                }
-                if (token) {
-                    parts.push(`${label}:${token}`);
-                }
-            };
-
-            const extractMeaningfulText = (rawValue) => {
-                if (rawValue === null || rawValue === undefined) {
-                    return '';
-                }
-
-                let data = rawValue;
-                if (typeof rawValue === 'string') {
-                    const trimmed = compactText(rawValue);
-                    if (!trimmed) {
-                        return '';
-                    }
-                    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                        try {
-                            data = JSON.parse(trimmed);
-                        } catch {
-                            return trimmed;
-                        }
-                    } else {
-                        return trimmed;
-                    }
-                }
-
-                if (typeof data !== 'object' || !data) {
-                    return compactText(String(data));
-                }
-
-                const obj = data;
-                const parts = [];
-
-                pushIfPresent(parts, 'status', obj.status);
-                pushIfPresent(parts, 'symbol', obj.symbol || obj.ticker);
-                pushIfPresent(parts, 'score', obj.score ?? obj.effective_score);
-                pushIfPresent(parts, 'sources_ok', obj.sources_ok);
-                pushIfPresent(parts, 'provider', obj.llm_provider || obj.provider);
-                pushIfPresent(parts, 'running', obj.running);
-                pushIfPresent(parts, 'started', obj.started);
-                pushIfPresent(parts, 'stopped', obj.stopped);
-
-                if (typeof obj.message === 'string') {
-                    pushIfPresent(parts, 'msg', obj.message);
-                } else if (typeof obj.error === 'string') {
-                    pushIfPresent(parts, 'err', obj.error);
-                }
-
-                if (Array.isArray(obj.errors) && obj.errors.length > 0) {
-                    const firstErr = obj.errors[0] || {};
-                    pushIfPresent(parts, 'err', firstErr.error || firstErr.message || safeToString(firstErr));
-                }
-
-                if (obj.record && typeof obj.record === 'object') {
-                    const record = obj.record;
-                    pushIfPresent(parts, 'symbol', record.symbol);
-                    pushIfPresent(parts, 'score', record.score);
-                    if (record.summary && typeof record.summary === 'object') {
-                        pushIfPresent(parts, 'sentiment', record.summary.sentiment);
-                        pushIfPresent(parts, 'risk', record.summary.risk);
-                    }
-                }
-
-                if (!parts.length) {
-                    return compactText(safeToString(obj));
-                }
-                return parts.join(' | ');
-            };
-
-            const compact = compactText(extractMeaningfulText(value));
-            if (!compact) {
-                return '';
-            }
-            return compact.length > limit ? `${compact.slice(0, limit)}…` : compact;
-        }
-
-        function clearLlmTrafficHistory() {
-            llmTrafficMonitor.recent = [];
-            renderLlmTrafficPopup();
-        }
-
-        function shouldTrackLlmTraffic(url) {
-            return String(url || '').includes('/analysis/v2');
-        }
-
-        function shortTrafficPath(url) {
-            const value = String(url || '');
-            const idx = value.indexOf('/analysis/v2');
-            return idx >= 0 ? value.slice(idx) : value;
-        }
-
-        function trafficActionLabel(pathname) {
-            const path = String(pathname || '');
-            if (path.includes('/analysis/v2/auto/status')) return t('traffic_action_auto_status');
-            if (path.includes('/analysis/v2/auto/start')) return t('traffic_action_auto_start');
-            if (path.includes('/analysis/v2/auto/stop')) return t('traffic_action_auto_stop');
-            if (path.includes('/analysis/v2/opportunities')) return t('traffic_action_opportunities');
-            if (path.includes('/analysis/v2/collect-us')) return t('traffic_action_collect_us');
-            if (path.includes('/analysis/v2/universe/discover')) return t('traffic_action_discover_universe');
-            if (path.includes('/analysis/v2/universe')) return t('traffic_action_universe_status');
-            if (path.includes('/analysis/v2/quote')) return t('traffic_action_quote');
-            return t('traffic_action_generic');
-        }
-
-        function extractTrafficTicket(url, responsePayload) {
-            let symbol = '';
-            let name = '';
-
-            try {
-                const parsed = new URL(String(url || ''), window.location.origin);
-                symbol = String(parsed.searchParams.get('symbol') || '').trim().toUpperCase();
-            } catch {
+            const strategyHistoryStatus = document.getElementById('strategy-history-status');
+            if (strategyHistoryStatus && (strategyHistoryStatus.textContent || '').trim() === 'Chargement...') {
+                strategyHistoryStatus.textContent = t('loading');
             }
 
-            const payload = (responsePayload && typeof responsePayload === 'object') ? responsePayload : {};
-            const record = (payload.record && typeof payload.record === 'object') ? payload.record : {};
-
-            if (!symbol) {
-                symbol = String(payload.symbol || record.symbol || payload.ticker || '').trim().toUpperCase();
-            }
-
-            const yahooData = (((record.sources || {}).yahoo_finance || {}).data || {});
-            name = String(
-                yahooData.short_name
-                || yahooData.long_name
-                || payload.company_name
-                || record.company_name
-                || ''
-            ).trim();
-
-            if (!symbol) {
-                return '';
-            }
-            return name ? `${symbol} — ${name}` : symbol;
-        }
-
-        function formatTrafficRequestInfo(entry) {
-            const rawUrl = String(entry?.url || '');
-            const method = String(entry?.method || '').toUpperCase();
-            let relativePath = shortTrafficPath(rawUrl);
-            let action = trafficActionLabel(relativePath);
-            let queryInfo = '';
-
-            try {
-                const parsed = new URL(rawUrl, window.location.origin);
-                relativePath = `${parsed.pathname}${parsed.search}`;
-                relativePath = shortTrafficPath(relativePath);
-                action = trafficActionLabel(parsed.pathname);
-
-                const params = parsed.searchParams;
-                const picked = [];
-                for (const key of ['symbol', 'limit', 'max_age_minutes', 'force_refresh', 'refresh_minutes', 'count']) {
-                    if (params.has(key)) {
-                        picked.push(`${key}=${params.get(key)}`);
-                    }
-                }
-                queryInfo = picked.join(' · ');
-            } catch {
-            }
-
-            const parts = [];
-            if (action) parts.push(action);
-            if (method) parts.push(method);
-            if (relativePath) parts.push(relativePath);
-            if (queryInfo) parts.push(queryInfo);
-            return parts.join(' · ');
-        }
-
-        function renderLlmTrafficPopup() {
-            const popup = document.getElementById('llm-traffic-popup');
-            const countEl = document.getElementById('llm-traffic-count');
-            const listEl = document.getElementById('llm-traffic-list');
-            if (!popup || !countEl || !listEl) {
-                return;
-            }
-
-            const activeEntries = Array.from(llmTrafficMonitor.active.values());
-            const activeCount = activeEntries.length;
-            countEl.textContent = t('traffic_active_recent', { active: activeCount, recent: llmTrafficMonitor.recent.length });
-
-            const rows = [...activeEntries, ...llmTrafficMonitor.recent]
-                .slice(0, llmTrafficMonitor.maxRecent)
-                .map((entry) => {
-                    const label = entry.status === 'pending' ? t('traffic_pending') : (entry.status === 'ok' ? t('traffic_ok') : t('traffic_error'));
-                    const duration = entry.durationMs != null ? `${entry.durationMs} ms` : '...';
-                    const statusClass = entry.status === 'pending' ? 'pending' : (entry.status === 'ok' ? 'ok' : 'error');
-                    const message = entry.message ? `<div class="llm-traffic-meta">${escapeHtml(entry.message)}</div>` : '';
-                    const responsePreview = entry.responsePreview
-                        ? `<div class="llm-traffic-meta">${escapeHtml(t('traffic_response'))}: ${escapeHtml(entry.responsePreview)}</div>`
-                        : '';
-                    const ticketLabel = entry.ticketLabel
-                        ? `<div class="llm-traffic-meta">${escapeHtml(t('traffic_ticket'))}: ${escapeHtml(entry.ticketLabel)}</div>`
-                        : '';
-                    const requestInfo = formatTrafficRequestInfo(entry);
-                    return `
-                        <div class="llm-traffic-item ${statusClass}">
-                            <div><strong>${escapeHtml(label)}</strong> · ${escapeHtml(requestInfo)}</div>
-                            <div class="llm-traffic-meta">${escapeHtml(duration)}${entry.method ? ` · ${escapeHtml(entry.method)}` : ''}</div>
-                            ${ticketLabel}
-                            ${message}
-                            ${responsePreview}
-                        </div>
-                    `;
-                })
-                .join('');
-
-            listEl.innerHTML = rows || `<div class="llm-traffic-meta">${escapeHtml(t('traffic_none'))}</div>`;
-
-            popup.classList.add('visible');
-            renderIaV2RuntimeMonitor();
         }
 
         function formatMonitoringTimestamp(value) {
@@ -1950,15 +1719,22 @@
             return `${sign}${num.toFixed(2)}%`;
         }
 
+        function formatTickerUsd(value) {
+            const num = Number(value);
+            if (Number.isNaN(num)) {
+                return '-';
+            }
+            return `$${num.toLocaleString(uiLocale(), { maximumFractionDigits: 2 })}`;
+        }
+
         async function refreshGlobalMarketTicker() {
             const trackEl = document.getElementById('global-ticker-track');
             if (!trackEl) {
                 return;
             }
 
-            const snapshots = await Promise.all(globalTickerSymbols.map(async (entry) => {
+            const buildQuoteDaySnapshot = async (symbol) => {
                 try {
-                    const symbol = entry.symbol;
                     const [latestData, historyData] = await Promise.all([
                         fetchJson(`${apiBase}/marketdata/latest?symbol=${encodeURIComponent(symbol)}`),
                         fetchJson(`${apiBase}/marketdata/history?symbol=${encodeURIComponent(symbol)}&days=5`),
@@ -1972,12 +1748,30 @@
                     const pct = currentPrice !== null && previousClose !== null && previousClose !== 0
                         ? ((currentPrice - previousClose) / previousClose) * 100
                         : null;
+                    return {
+                        symbol,
+                        currentPrice,
+                        pct,
+                    };
+                } catch {
+                    return {
+                        symbol,
+                        currentPrice: null,
+                        pct: null,
+                    };
+                }
+            };
+
+            const snapshots = await Promise.all(globalTickerSymbols.map(async (entry) => {
+                try {
+                    const symbol = entry.symbol;
+                    const snapshot = await buildQuoteDaySnapshot(symbol);
 
                     return {
                         symbol,
                         label: entry.label,
-                        price: Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : '-',
-                        pct,
+                        price: Number.isFinite(snapshot.currentPrice) ? snapshot.currentPrice.toFixed(2) : '-',
+                        pct: snapshot.pct,
                     };
                 } catch {
                     return {
@@ -1989,7 +1783,7 @@
                 }
             }));
 
-            const listHtml = snapshots.map((item) => {
+            const marketItemsHtml = snapshots.map((item) => {
                 const pctClass = item.pct === null
                     ? 'global-ticker-flat'
                     : (item.pct > 0 ? 'global-ticker-up' : (item.pct < 0 ? 'global-ticker-down' : 'global-ticker-flat'));
@@ -2002,6 +1796,72 @@
                     </span>
                 `;
             }).join('');
+
+            const openPortfolioRows = Array.isArray(portfolioTickerSnapshot)
+                ? portfolioTickerSnapshot.filter((row) => Number(row?.market_value || 0) > 0)
+                : [];
+            const portfolioTotal = openPortfolioRows.reduce((sum, row) => sum + Number(row?.market_value || 0), 0);
+            const portfolioQuoteSnapshots = await Promise.all(
+                openPortfolioRows.map((row) => buildQuoteDaySnapshot(String(row?.symbol || '').toUpperCase()))
+            );
+            const portfolioQuoteBySymbol = new Map(
+                portfolioQuoteSnapshots.map((item) => [String(item?.symbol || '').toUpperCase(), item])
+            );
+            const weightedQuoteDayPct = (() => {
+                let weightedSum = 0;
+                let totalWeight = 0;
+                for (const row of openPortfolioRows) {
+                    const symbol = String(row?.symbol || '').toUpperCase();
+                    const quoteSnapshot = portfolioQuoteBySymbol.get(symbol);
+                    const pct = Number(quoteSnapshot?.pct);
+                    const weight = Number(row?.market_value || 0);
+                    if (!Number.isFinite(pct) || !Number.isFinite(weight) || weight <= 0) {
+                        continue;
+                    }
+                    weightedSum += pct * weight;
+                    totalWeight += weight;
+                }
+                return totalWeight > 0 ? (weightedSum / totalWeight) : null;
+            })();
+            const portfolioPnlClass = weightedQuoteDayPct === null
+                ? 'global-ticker-flat'
+                : (weightedQuoteDayPct > 0 ? 'global-ticker-up' : (weightedQuoteDayPct < 0 ? 'global-ticker-down' : 'global-ticker-flat'));
+
+            const portfolioSummaryHtml = openPortfolioRows.length
+                ? `
+                    <span class="global-ticker-item">
+                        <span class="global-ticker-symbol">${escapeHtml(tf('PF', 'PF'))}</span>
+                        <span class="global-ticker-name">${escapeHtml(tf('Portefeuille', 'Cartera'))}</span>
+                        <span>${escapeHtml(formatTickerUsd(portfolioTotal))}</span>
+                        <span class="${portfolioPnlClass}">${escapeHtml(formatTickerPercent(weightedQuoteDayPct))}</span>
+                    </span>
+                `
+                : '';
+
+            const portfolioItemsHtml = openPortfolioRows
+                .sort((left, right) => Number(right?.market_value || 0) - Number(left?.market_value || 0))
+                .map((row) => {
+                    const symbol = String(row?.symbol || '').toUpperCase();
+                    const quoteSnapshot = portfolioQuoteBySymbol.get(symbol);
+                    const dayPct = Number(quoteSnapshot?.pct);
+                    const pctClass = Number.isFinite(dayPct)
+                        ? (dayPct > 0 ? 'global-ticker-up' : (dayPct < 0 ? 'global-ticker-down' : 'global-ticker-flat'))
+                        : 'global-ticker-flat';
+                    const pctDisplay = Number.isFinite(dayPct)
+                        ? formatTickerPercent(dayPct)
+                        : '-';
+                    return `
+                        <span class="global-ticker-item">
+                            <span class="global-ticker-symbol">${escapeHtml(symbol)}</span>
+                            <span class="global-ticker-name">${escapeHtml(tf('Cours jour', 'Curso día'))}</span>
+                            <span>${escapeHtml(formatTickerUsd(row?.market_value))}</span>
+                            <span class="${pctClass}">${escapeHtml(pctDisplay)}</span>
+                        </span>
+                    `;
+                })
+                .join('');
+
+            const listHtml = `${marketItemsHtml}${portfolioSummaryHtml}${portfolioItemsHtml}`;
 
             if (!listHtml) {
                 trackEl.textContent = currentLanguage === 'es' ? 'Mercados no disponibles.' : 'Marchés indisponibles.';
@@ -2028,12 +1888,6 @@
                 return;
             }
 
-            const activeEntries = Array.from(llmTrafficMonitor.active.values())
-                .filter((item) => shouldTrackLlmTraffic(item?.url));
-            const lastEntries = llmTrafficMonitor.recent
-                .filter((item) => shouldTrackLlmTraffic(item?.url))
-                .slice(0, 5);
-
             const auto = iaV2AutoStatusSnapshot || {};
             const running = Boolean(auto.running);
             const autoStateLabel = running
@@ -2041,30 +1895,6 @@
                 : (currentLanguage === 'es' ? 'Detenido' : 'Arrêté');
             const lastError = String(auto.last_error || '').trim();
             const lastResult = (auto.last_result && typeof auto.last_result === 'object') ? auto.last_result : {};
-
-            const activeHtml = activeEntries.length
-                ? activeEntries
-                    .map((entry) => {
-                        const startedAt = Number(entry?.startedAtMs || 0);
-                        const elapsed = startedAt > 0 ? Date.now() - startedAt : NaN;
-                        return `<li>${escapeHtml(formatTrafficRequestInfo(entry))} · ${escapeHtml(formatRuntimeElapsedMs(elapsed))}</li>`;
-                    })
-                    .join('')
-                : `<li>${escapeHtml(currentLanguage === 'es' ? 'Ninguna solicitud V2 en curso.' : 'Aucune requête V2 en cours.')}</li>`;
-
-            const recentHtml = lastEntries.length
-                ? lastEntries
-                    .map((entry) => {
-                        const statusLabel = entry.status === 'ok'
-                            ? (currentLanguage === 'es' ? 'OK' : 'OK')
-                            : (entry.status === 'error'
-                                ? (currentLanguage === 'es' ? 'ERROR' : 'ERREUR')
-                                : (currentLanguage === 'es' ? 'PENDIENTE' : 'EN COURS'));
-                        const responsePreview = entry.responsePreview ? ` · ${entry.responsePreview}` : '';
-                        return `<li>[${escapeHtml(statusLabel)}] ${escapeHtml(formatTrafficRequestInfo(entry))} · ${escapeHtml(formatRuntimeElapsedMs(entry.durationMs))}${escapeHtml(responsePreview)}</li>`;
-                    })
-                    .join('')
-                : `<li>${escapeHtml(currentLanguage === 'es' ? 'Sin histórico reciente.' : 'Aucun historique récent.')}</li>`;
 
             node.innerHTML = `
                 <div class="analysis-summary-card" style="margin-top: 8px;">
@@ -2087,60 +1917,11 @@
                         </div>
                         ${lastError ? `<div style="margin-top:6px; color:#f2a8a8;"><strong>${escapeHtml(currentLanguage === 'es' ? 'Último error' : 'Dernière erreur')}:</strong> ${escapeHtml(lastError)}</div>` : ''}
                     </div>
-                    <div style="margin-top:10px;">
-                        <strong>${escapeHtml(currentLanguage === 'es' ? 'En ejecución ahora' : 'En cours maintenant')}</strong>
-                        <ul class="analysis-rationale" style="margin-top:6px;">${activeHtml}</ul>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <strong>${escapeHtml(currentLanguage === 'es' ? 'Últimas solicitudes V2' : 'Dernières requêtes V2')}</strong>
-                        <ul class="analysis-rationale" style="margin-top:6px;">${recentHtml}</ul>
-                    </div>
                 </div>
             `;
         }
 
-        function beginLlmTraffic(requestId, url, method) {
-            llmTrafficMonitor.active.set(requestId, {
-                id: requestId,
-                url,
-                method,
-                status: 'pending',
-                startedAtMs: Date.now(),
-                durationMs: null,
-                message: '',
-                responsePreview: '',
-                ticketLabel: '',
-            });
-            renderLlmTrafficPopup();
-        }
-
-        function endLlmTraffic(requestId, status, message = '', responsePreview = '') {
-            const entry = llmTrafficMonitor.active.get(requestId);
-            if (!entry) {
-                return;
-            }
-            llmTrafficMonitor.active.delete(requestId);
-            const completed = {
-                ...entry,
-                status,
-                durationMs: Math.max(0, Date.now() - (entry.startedAtMs || Date.now())),
-                message: String(message || '').slice(0, 180),
-                responsePreview: toTrafficPreview(responsePreview, 50),
-                ticketLabel: extractTrafficTicket(entry.url, responsePreview),
-            };
-            llmTrafficMonitor.recent.unshift(completed);
-            llmTrafficMonitor.recent = llmTrafficMonitor.recent.slice(0, llmTrafficMonitor.maxRecent);
-            renderLlmTrafficPopup();
-        }
-
         async function fetchJson(url, options = {}) {
-            const method = String(options?.method || 'GET').toUpperCase();
-            const requestId = `req_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
-            const tracked = shouldTrackLlmTraffic(url);
-            if (tracked) {
-                beginLlmTraffic(requestId, url, method);
-            }
-
             try {
                 const response = await fetch(url, {
                     headers: { 'Content-Type': 'application/json' },
@@ -2149,30 +1930,42 @@
 
                 if (!response.ok) {
                     const message = await response.text();
-                    if (tracked) {
-                        endLlmTraffic(requestId, 'error', message || `HTTP ${response.status}`, message || `HTTP ${response.status}`);
-                    }
                     throw new Error(message || `HTTP ${response.status}`);
                 }
 
                 const payload = await response.json();
-                if (tracked) {
-                    endLlmTraffic(requestId, 'ok', '', payload);
-                }
                 return payload;
             } catch (error) {
-                if (tracked) {
-                    endLlmTraffic(requestId, 'error', error?.message || 'network_error', error?.message || 'network_error');
-                }
                 throw error;
             }
         }
 
-        document.addEventListener('click', (event) => {
-            if (event?.target?.id === 'llm-traffic-clear-btn') {
-                clearLlmTrafficHistory();
+        function setStrategyHistoryGroupVisibility(symbol) {
+            const body = document.getElementById('strategy-history-body');
+            if (!body) {
+                return;
             }
-        });
+            const normalized = String(symbol || '').trim().toUpperCase();
+            if (!normalized) {
+                return;
+            }
+            const collapsed = strategyHistoryCollapsedSymbols.has(normalized);
+            body.querySelectorAll('tr[data-history-symbol]').forEach((row) => {
+                if (String(row?.dataset?.historySymbol || '').toUpperCase() !== normalized) {
+                    return;
+                }
+                row.style.display = collapsed ? 'none' : '';
+            });
+            body.querySelectorAll('button.strategy-history-toggle').forEach((button) => {
+                if (String(button?.dataset?.symbol || '').toUpperCase() !== normalized) {
+                    return;
+                }
+                button.textContent = collapsed ? '▸' : '▾';
+                button.title = collapsed
+                    ? tf('Déplier', 'Desplegar')
+                    : tf('Replier', 'Plegar');
+            });
+        }
 
         function formatMaybeNumber(value) {
             const num = Number(value);
@@ -2400,27 +2193,6 @@
                 }
             } catch {
                 // Ignore malformed persisted data.
-            }
-        }
-
-        function persistSelectedPortfolioSymbol() {
-            try {
-                if (!selectedPortfolioSymbol) {
-                    window.localStorage.removeItem(selectedPortfolioSymbolStorageKey);
-                    return;
-                }
-                window.localStorage.setItem(selectedPortfolioSymbolStorageKey, selectedPortfolioSymbol);
-            } catch {
-                // Ignore storage failures silently.
-            }
-        }
-
-        function loadPersistedSelectedPortfolioSymbol() {
-            try {
-                const raw = window.localStorage.getItem(selectedPortfolioSymbolStorageKey);
-                selectedPortfolioSymbol = String(raw || '').trim().toUpperCase();
-            } catch {
-                selectedPortfolioSymbol = '';
             }
         }
 
@@ -2668,6 +2440,7 @@
                     return;
                 }
                 loadActivities().catch(console.error);
+                loadStrategyHistory().catch(console.error);
             }, activitiesAutoRefreshMs);
         }
 
@@ -2679,10 +2452,83 @@
             });
         }
 
+        function renderSlPieChart(hitInfo) {
+            const hits = Number(hitInfo?.hits || 0);
+            const required = Number(hitInfo?.required_hits || 0);
+            const reason = String(hitInfo?.reason || '');
+            const size = 22;
+            const r = 9;
+            const cx = size / 2;
+            const cy = size / 2;
+            if (!required) {
+                return `<svg width="${size}" height="${size}" title="Pas de signal SL actif"><circle cx="${cx}" cy="${cy}" r="${r}" fill="#1e2a45" stroke="#2a3558" stroke-width="1"/></svg>`;
+            }
+            const ratio = Math.min(hits / required, 1);
+            const angle = ratio * 2 * Math.PI;
+            const x1 = cx + r * Math.sin(0);
+            const y1 = cy - r * Math.cos(0);
+            const x2 = cx + r * Math.sin(angle);
+            const y2 = cy - r * Math.cos(angle);
+            const largeArc = angle > Math.PI ? 1 : 0;
+            const fillColor = ratio < 0.5 ? '#f5a623' : ratio < 0.8 ? '#e07b20' : '#c0392b';
+            const pieSlice = ratio >= 1
+                ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fillColor}"/>`
+                : `<path d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${fillColor}"/>`;
+            const tooltipText = `SL: ${hits}/${required}${reason ? ' · ' + reason : ''}`;
+            return `<svg width="${size}" height="${size}" style="display:block;margin:auto;" title="${tooltipText.replace(/"/g, '&quot;')}">
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="#1e2a45" stroke="#2a3558" stroke-width="1"/>
+                ${pieSlice}
+                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2a3558" stroke-width="1"/>
+            </svg>`;
+        }
+
+        function applyActivitiesSymbolFilter() {
+            const input = document.getElementById('activities-symbol-filter');
+            const filter = (input?.value || '').trim().toUpperCase();
+            const clearBtn = document.getElementById('activities-clear-filter');
+            if (clearBtn) clearBtn.style.display = filter ? '' : 'none';
+            const activitiesBody = document.getElementById('activities-body');
+            if (activitiesBody) {
+                for (const row of activitiesBody.rows) {
+                    const sym = row.cells[2] ? row.cells[2].textContent.trim().toUpperCase() : '';
+                    row.style.display = (!filter || sym === filter) ? '' : 'none';
+                }
+            }
+            const historyBody = document.getElementById('strategy-history-body');
+            if (historyBody) {
+                for (const row of historyBody.rows) {
+                    if (row.dataset.symbolGroup !== undefined) {
+                        row.style.display = (!filter || row.dataset.symbolGroup === filter) ? '' : 'none';
+                    } else if (row.dataset.historySymbol) {
+                        row.style.display = (!filter || row.dataset.historySymbol === filter) ? '' : 'none';
+                    }
+                }
+            }
+        }
+
+        function goToActivities(symbol) {
+            const input = document.getElementById('activities-symbol-filter');
+            if (input) input.value = symbol || '';
+            setActiveTab('activities');
+            Promise.all([loadActivities(), loadStrategyHistory()]).catch(console.error);
+        }
+
+        async function togglePauseSymbol(symbol) {
+            const paused = Array.isArray(trendFollowingStatusSnapshot?.paused_symbols)
+                && trendFollowingStatusSnapshot.paused_symbols.includes(symbol);
+            const action = paused ? 'resume' : 'pause';
+            await fetchJson(`${apiBase}/strategy/trend-following/${action}/${encodeURIComponent(symbol)}`, { method: 'POST' });
+            await refreshTrendFollowingStatus();
+            await loadPositions();
+        }
+
         async function loadActivities() {
             const status = document.getElementById('activities-status');
             const body = document.getElementById('activities-body');
             const pnlBox = document.getElementById('activities-realized-pnl');
+            if (!status || !body || !pnlBox) {
+                return;
+            }
             status.textContent = currentLanguage === 'es' ? 'Cargando actividades...' : 'Chargement des activités...';
             pnlBox.textContent = currentLanguage === 'es' ? 'Margen / Pérdida realizada: cálculo en curso...' : 'Marge / Perte réalisée: calcul en cours...';
 
@@ -2737,14 +2583,227 @@
                 status.textContent = currentLanguage === 'es'
                     ? `Actividades mostradas: ${activities.length}${purgeText}. Eliminación definitiva en broker no autorizada.${autoResetNote}`
                     : `Activités affichées: ${activities.length}${purgeText}. Suppression définitive broker non autorisée.${autoResetNote}`;
+                applyActivitiesSymbolFilter();
             } catch (error) {
                 status.textContent = currentLanguage === 'es' ? `Carga de actividades imposible: ${error.message}` : `Chargement activités impossible: ${error.message}`;
                 pnlBox.textContent = currentLanguage === 'es' ? 'Margen / Pérdida realizada: no disponible' : 'Marge / Perte réalisée: indisponible';
             }
         }
 
+        async function loadStrategyHistory() {
+            const status = document.getElementById('strategy-history-status');
+            const body = document.getElementById('strategy-history-body');
+            if (!status || !body) {
+                return;
+            }
+
+            status.textContent = currentLanguage === 'es'
+                ? 'Cargando historial del sistema...'
+                : 'Chargement historique système...';
+
+            try {
+                const payload = await fetchJson(`${apiBase}/strategy/trend-following/history?limit=200`);
+                const records = Array.isArray(payload?.records) ? payload.records : [];
+                strategyHistoryLastRecords = records;
+                body.innerHTML = '';
+
+                const sortedRecords = [...records].sort((left, right) => {
+                    const leftTs = Date.parse(String(left?.recorded_at || ''));
+                    const rightTs = Date.parse(String(right?.recorded_at || ''));
+                    const leftValid = Number.isFinite(leftTs);
+                    const rightValid = Number.isFinite(rightTs);
+                    if (leftValid && rightValid) {
+                        return rightTs - leftTs;
+                    }
+                    return String(right?.recorded_at || '').localeCompare(String(left?.recorded_at || ''));
+                });
+
+                const bySymbol = new Map();
+                for (const row of sortedRecords) {
+                    const symbol = String(row?.symbol || '-').trim().toUpperCase() || '-';
+                    if (!bySymbol.has(symbol)) {
+                        bySymbol.set(symbol, []);
+                    }
+                    bySymbol.get(symbol).push(row);
+                }
+
+                for (const [symbol, symbolRows] of bySymbol.entries()) {
+                    const symbolHeader = document.createElement('tr');
+                    const symbolKey = String(symbol || '').toUpperCase();
+                    const isCollapsed = strategyHistoryCollapsedSymbols.has(symbolKey);
+                    symbolHeader.innerHTML = `
+                        <td colspan="7" style="font-weight:700; background:#121a31; border-top:1px solid #2a3558;">
+                            <button class="strategy-history-toggle" data-symbol="${escapeHtml(symbolKey)}" style="margin-right:8px; min-width:28px;">${isCollapsed ? '▸' : '▾'}</button>
+                            QUOTE: ${escapeHtml(symbol)}
+                        </td>
+                    `;
+                    symbolHeader.dataset.symbolGroup = symbolKey;
+                    body.appendChild(symbolHeader);
+
+                    const byDay = new Map();
+                    const resolveDayKey = (raw) => {
+                        const rawText = String(raw || '');
+                        const parsed = new Date(rawText);
+                        if (!Number.isNaN(parsed.getTime())) {
+                            return parsed.toISOString().slice(0, 10);
+                        }
+                        return rawText.slice(0, 10) || '-';
+                    };
+
+                    for (const row of symbolRows) {
+                        const dayKey = resolveDayKey(row?.recorded_at);
+                        if (!byDay.has(dayKey)) {
+                            byDay.set(dayKey, []);
+                        }
+                        byDay.get(dayKey).push(row);
+                    }
+
+                    for (const [dayKey, dayRows] of byDay.entries()) {
+                        let dayPnl = 0;
+                        let hasAnyPnl = false;
+
+                        for (const row of dayRows) {
+                            const tr = document.createElement('tr');
+                            tr.dataset.historySymbol = symbolKey;
+                            const pnl = row?.pnl_usd;
+                            const pnlNum = Number(pnl);
+                            if (Number.isFinite(pnlNum)) {
+                                dayPnl += pnlNum;
+                                hasAnyPnl = true;
+                            }
+                            tr.innerHTML = `
+                                <td>${escapeHtml(formatShortTimestamp(row?.recorded_at || '-'))}</td>
+                                <td>${escapeHtml(String(row?.side || '-').toUpperCase())}</td>
+                                <td>${escapeHtml(String(row?.symbol || '-'))}</td>
+                                <td>${escapeHtml(formatMaybeNumber(row?.qty))}</td>
+                                <td>${escapeHtml(formatMaybeNumber(row?.price))}</td>
+                                <td>${escapeHtml(String(row?.reason || '-'))}</td>
+                                <td>${escapeHtml(pnl === null || pnl === undefined ? '-' : formatSignedNumber(pnl, ' USD'))}</td>
+                            `;
+                            body.appendChild(tr);
+                        }
+
+                        const subtotal = document.createElement('tr');
+                        subtotal.dataset.historySymbol = symbolKey;
+                        subtotal.innerHTML = `
+                            <td colspan="6" style="font-style:italic; color:#a9b5d6; background:#0f1529;">P&L jour ${escapeHtml(dayKey)}</td>
+                            <td style="font-weight:700; background:#0f1529;">${escapeHtml(hasAnyPnl ? formatSignedNumber(dayPnl, ' USD') : '-')}</td>
+                        `;
+                        body.appendChild(subtotal);
+                    }
+
+                    setStrategyHistoryGroupVisibility(symbolKey);
+                }
+
+                if (!records.length) {
+                    const empty = document.createElement('tr');
+                    empty.innerHTML = `<td colspan="7">${escapeHtml(currentLanguage === 'es' ? 'Sin historial de sistema.' : 'Aucun historique système.')}</td>`;
+                    body.appendChild(empty);
+                }
+
+                status.textContent = currentLanguage === 'es'
+                    ? `Historial sistema cargado: ${records.length} (agrupado por símbolo y día)`
+                    : `Historique système chargé: ${records.length} (groupé par quote et par jour)`;
+                applyActivitiesSymbolFilter();
+            } catch (error) {
+                status.textContent = currentLanguage === 'es'
+                    ? `Carga historial imposible: ${error.message}`
+                    : `Chargement historique impossible: ${error.message}`;
+            }
+        }
+
+        async function clearStrategyHistory() {
+            const status = document.getElementById('strategy-history-status');
+            if (!status) {
+                return;
+            }
+
+            const confirmed = window.confirm(
+                tf(
+                    'Confirmer DELETE table ? Cette action vide strategy_trade_history.',
+                    'Confirmar DELETE table? Esta acción vacía strategy_trade_history.'
+                )
+            );
+            if (!confirmed) {
+                return;
+            }
+
+            status.textContent = currentLanguage === 'es'
+                ? 'Borrado del histórico persistente en curso...'
+                : 'Suppression de l\'historique persistant en cours...';
+
+            try {
+                const payload = await fetchJson(`${apiBase}/strategy/trend-following/history/clear`, { method: 'POST' });
+                const deletedCount = Number(payload?.deleted_count || 0);
+                status.textContent = currentLanguage === 'es'
+                    ? `Historial persistente borrado: ${deletedCount} línea(s).`
+                    : `Historique persistant supprimé: ${deletedCount} ligne(s).`;
+                await loadStrategyHistory();
+            } catch (error) {
+                status.textContent = currentLanguage === 'es'
+                    ? `Borrado imposible: ${error.message}`
+                    : `Suppression impossible: ${error.message}`;
+            }
+        }
+
+        async function exportStrategyHistory(format) {
+            const normalized = String(format || '').toLowerCase();
+            if (!['csv', 'pdf'].includes(normalized)) {
+                throw new Error('Unsupported format');
+            }
+
+            const status = document.getElementById('strategy-history-status');
+            const button = document.getElementById(normalized === 'csv' ? 'export-strategy-history-csv' : 'export-strategy-history-pdf');
+            const previousLabel = button?.textContent || '';
+            if (button) {
+                button.disabled = true;
+                button.textContent = '...';
+            }
+
+            try {
+                const response = await fetch(`${apiBase}/strategy/trend-following/history/export?format=${normalized}&limit=1000`);
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || `HTTP ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const disposition = response.headers.get('content-disposition') || '';
+                const match = disposition.match(/filename="?([^";]+)"?/i);
+                const filename = match?.[1] || `trend_following_history.${normalized}`;
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+
+                if (status) {
+                    status.textContent = currentLanguage === 'es'
+                        ? `Exportación ${normalized.toUpperCase()} completada.`
+                        : `Export ${normalized.toUpperCase()} terminé.`;
+                }
+            } catch (error) {
+                if (status) {
+                    status.textContent = currentLanguage === 'es'
+                        ? `Exportación imposible: ${error.message}`
+                        : `Export impossible: ${error.message}`;
+                }
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = previousLabel;
+                }
+            }
+        }
+
         async function purgeActivities() {
             const status = document.getElementById('activities-status');
+            if (!status) {
+                return;
+            }
             status.textContent = currentLanguage === 'es' ? 'Purgado local en curso...' : 'Purge locale en cours...';
             try {
                 const payload = await fetchJson(`${apiBase}/activities/purge`, { method: 'POST' });
@@ -2758,6 +2817,9 @@
 
         async function resetActivitiesPurge() {
             const status = document.getElementById('activities-status');
+            if (!status) {
+                return;
+            }
             status.textContent = currentLanguage === 'es' ? 'Restauración en curso...' : 'Restauration en cours...';
             try {
                 const payload = await fetchJson(`${apiBase}/activities/purge/reset`, { method: 'POST' });
@@ -2885,10 +2947,16 @@
                     : Array(Math.max(history.length, 2)).fill(dailyAverage);
 
                 const chartWidth = 320;
-                const chartHeight = 80;
-                const range = buildSeriesRange([history, averageLineSeries]);
+                const chartHeight = 180;
+                const entryPriceRaw = trendFollowingStatusSnapshot?.positions?.[symbol]?.entry_price ?? null;
+                const entryPrice = entryPriceRaw !== null && Number.isFinite(Number(entryPriceRaw)) ? Number(entryPriceRaw) : null;
+                const entryPriceSeries = entryPrice !== null ? [entryPrice] : [];
+                const range = buildSeriesRange([history, averageLineSeries, entryPriceSeries]);
                 const sparklinePoints = buildSparklinePoints(history, chartWidth, chartHeight, 6, range.min, range.max);
                 const averageLinePoints = buildSparklinePoints(averageLineSeries, chartWidth, chartHeight, 6, range.min, range.max);
+                const entryPriceY = entryPrice !== null && range.max !== range.min
+                    ? (6 + (1 - (entryPrice - range.min) / (range.max - range.min)) * (chartHeight - 12)).toFixed(1)
+                    : null;
                 const yMinLabel = formatAxisNumber(range.min);
                 const yMidLabel = formatAxisNumber((range.min + range.max) / 2);
                 const yMaxLabel = formatAxisNumber(range.max);
@@ -2907,7 +2975,7 @@
                 quoteOutput.innerHTML = `
                 ${fieldsHtml}
                 <div class="quote-chart-wrap">
-                    <div class="quote-chart-title">Évolution (bleu: quote live, vert: moyenne clôture 5 jours)</div>
+                    <div class="quote-chart-title">Évolution (bleu: quote live, vert: moyenne clôture 5 jours${entryPrice !== null ? ', orange: dernier achat' : ''})</div>
                     <div class="quote-chart-shell">
                         <div class="quote-axis-y">
                             <span>${yMaxLabel}</span>
@@ -2923,6 +2991,7 @@
                             <line x1="${chartWidth - 6}" y1="6" x2="${chartWidth - 6}" y2="${chartHeight - 6}" stroke="#2a3558" stroke-width="1"></line>
                             <polyline points="${sparklinePoints}" fill="none" stroke="#2a5bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
                             <polyline points="${averageLinePoints}" fill="none" stroke="#35c46a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 3"></polyline>
+                            ${entryPriceY !== null ? `<line x1="6" y1="${entryPriceY}" x2="${chartWidth - 6}" y2="${entryPriceY}" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="5 3"></line><text x="${chartWidth - 8}" y="${Math.max(10, Number(entryPriceY) - 2)}" fill="#f5a623" font-size="8" text-anchor="end">${entryPrice.toFixed(2)}</text>` : ''}
                         </svg>
                     </div>
                     <div class="quote-axis-x">
@@ -2962,6 +3031,7 @@
                 }
                 const isSold = Boolean(options?.isSold);
                 const positionSignal = analysisStateBySymbol[normalizedSymbol] || null;
+                const slHitInfo = !isSold ? (trendFollowingStatusSnapshot?.sell_signal_hits?.[normalizedSymbol] || null) : null;
                 const marketValue = Number(payload?.market_value || 0);
                 const unrealizedPl = Number(payload?.unrealized_pl || 0);
                 const unrealizedPlPcRaw = Number(payload?.unrealized_plpc);
@@ -2993,7 +3063,7 @@
                     row.classList.add('position-row-near-sold-blink');
                 }
                 row.title = isSold
-                    ? tf('Position vendue (clic pour voir les mouvements)', 'Posición vendida (clic para ver movimientos)')
+                    ? tf('Position vendue', 'Posición vendida')
                     : 'Cliquer pour mettre à jour la quote';
                 row.innerHTML = `
             <td>${escapeHtml(normalizedSymbol)}${isSold ? ` · ${escapeHtml(tf('vendu', 'vendido'))}` : ''}</td>
@@ -3001,15 +3071,15 @@
             <td>${isSold ? '-' : escapeHtml(formatMaybeNumber(payload?.market_value ?? ''))}</td>
             <td>${isSold ? '-' : escapeHtml(formatMaybeNumber(payload?.unrealized_pl ?? ''))}</td>
                         <td class="signal-cell ${isSold ? '' : variationClass}">${isSold ? '-' : escapeHtml(variationText)}</td>
-            <td><button class="analyze-position-button">IA</button></td>
+            <td style="text-align:center; vertical-align:middle;">${isSold ? '' : renderSlPieChart(slHitInfo)}</td>
+                        <td class="positions-action-cell"><button class="analyze-position-button positions-action-button">IA</button></td>
+                        <td class="positions-action-cell"><button class="goto-activities-button positions-action-button" title="Voir activités">📋</button></td>
+                        <td class="positions-action-cell"><button class="pause-symbol-button positions-action-button" data-symbol="${escapeHtml(normalizedSymbol)}" title="Pause/reprendre ce symbol dans la stratégie">⏸</button></td>
           `;
 
                 row.addEventListener('click', () => {
-                    selectedPortfolioSymbol = normalizedSymbol;
-                    persistSelectedPortfolioSymbol();
                     selectQuoteSymbol(normalizedSymbol).catch(console.error);
-                    loadPositionMovements(normalizedSymbol).catch(console.error);
-                    appendTrendFollowingLog(tf(`Portfolio click ${normalizedSymbol} · chargement mouvements`, `Portfolio click ${normalizedSymbol} · cargando movimientos`));
+                    appendTrendFollowingLog(tf(`Portfolio click ${normalizedSymbol} · quote mise à jour`, `Portfolio click ${normalizedSymbol} · quote actualizada`));
                 });
                 const analyzeButton = row.querySelector('.analyze-position-button');
                 if (analyzeButton) {
@@ -3018,8 +3088,31 @@
                         analyzePosition(normalizedSymbol, analyzeButton).catch(console.error);
                     });
                 }
+                const gotoActivitiesButton = row.querySelector('.goto-activities-button');
+                if (gotoActivitiesButton) {
+                    gotoActivitiesButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        goToActivities(normalizedSymbol);
+                    });
+                }
+                const pauseSymbolButton = row.querySelector('.pause-symbol-button');
+                if (pauseSymbolButton) {
+                    const isPaused = Array.isArray(trendFollowingStatusSnapshot?.paused_symbols)
+                        && trendFollowingStatusSnapshot.paused_symbols.includes(normalizedSymbol);
+                    pauseSymbolButton.title = isPaused
+                        ? `Reprendre ${normalizedSymbol} dans la stratégie`
+                        : `Mettre en pause ${normalizedSymbol} dans la stratégie`;
+                    pauseSymbolButton.textContent = isPaused ? '▶' : '⏸';
+                    pauseSymbolButton.style.color = isPaused ? '#f5a623' : '';
+                    pauseSymbolButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        togglePauseSymbol(normalizedSymbol).catch(console.error);
+                    });
+                }
                 body.appendChild(row);
             };
+
+            const nextPortfolioTickerSnapshot = [];
 
             for (const pos of positions) {
                 const normalizedSymbol = String(pos?.symbol || '').trim().toUpperCase();
@@ -3038,6 +3131,12 @@
                     unrealized_plpc: Number(pos.unrealized_plpc),
                     sold_at: null,
                 };
+                nextPortfolioTickerSnapshot.push({
+                    symbol: normalizedSymbol,
+                    market_value: Number(pos.market_value || 0),
+                    unrealized_pl: Number(pos.unrealized_pl || 0),
+                    unrealized_plpc: Number(pos.unrealized_plpc),
+                });
                 delete soldPositionsBySymbol[normalizedSymbol];
                 persistSoldPositions();
 
@@ -3062,6 +3161,8 @@
             for (const sold of soldRows) {
                 renderPositionRow(sold, { isSold: true });
             }
+
+            portfolioTickerSnapshot = nextPortfolioTickerSnapshot;
 
             pushPositionsTotalSnapshot(totalMarketValue);
 
@@ -3123,167 +3224,6 @@
             if (!quoteInitializedFromPositions && positions.length > 0 && positions[0]?.symbol) {
                 quoteInitializedFromPositions = true;
                 await selectQuoteSymbol(positions[0].symbol);
-            }
-
-            if (selectedPortfolioSymbol) {
-                loadPositionMovements(selectedPortfolioSymbol).catch(console.error);
-            }
-        }
-
-        async function loadPositionMovements(symbol) {
-            const output = document.getElementById('position-movements-output');
-            const normalized = String(symbol || '').trim().toUpperCase();
-            if (!output) {
-                return;
-            }
-            if (!normalized) {
-                output.textContent = '';
-                return;
-            }
-
-            output.textContent = currentLanguage === 'es'
-                ? `Movimientos de ${normalized}: carga en curso...`
-                : `Mouvements de ${normalized} : chargement...`;
-
-            try {
-                const [payload, strategyStatus] = await Promise.all([
-                    fetchJson(`${apiBase}/activities?limit=300&apply_purge=${activitiesPurgeFilterEnabled ? '1' : '0'}`),
-                    fetchJson(`${apiBase}/strategy/trend-following/status`).catch(() => ({})),
-                ]);
-
-                const allActivities = Array.isArray(payload?.activities) ? payload.activities : [];
-                const symbolActivities = allActivities.filter((activity) => String(activity?.symbol || '').toUpperCase() === normalized);
-                const timeline = [];
-                let timelineSource = 'activities';
-
-                if (symbolActivities.length) {
-                    const lots = [];
-                    let cumulativePnl = 0;
-                    for (const activity of [...symbolActivities].reverse()) {
-                        const side = String(activity?.side || '').toLowerCase();
-                        const qty = Number(activity?.qty);
-                        const price = Number(activity?.price);
-                        if (!['buy', 'sell'].includes(side) || Number.isNaN(qty) || Number.isNaN(price) || qty <= 0 || price <= 0) {
-                            continue;
-                        }
-
-                        let movementPnl = null;
-                        if (side === 'buy') {
-                            lots.push({ qty, price });
-                        } else {
-                            let remaining = qty;
-                            let realized = 0;
-                            while (remaining > 0 && lots.length > 0) {
-                                const lot = lots[0];
-                                const matched = Math.min(remaining, lot.qty);
-                                realized += matched * (price - lot.price);
-                                remaining -= matched;
-                                lot.qty -= matched;
-                                if (lot.qty <= 1e-9) {
-                                    lots.shift();
-                                }
-                            }
-                            movementPnl = realized;
-                            cumulativePnl += realized;
-                        }
-
-                        timeline.push({
-                            timestamp: activity?.timestamp,
-                            side,
-                            qty,
-                            price,
-                            movementPnl,
-                            cumulativePnl,
-                        });
-                    }
-                }
-
-                if (!timeline.length) {
-                    const strategyEvents = Array.isArray(strategyStatus?.events) ? strategyStatus.events : [];
-                    const symbolEvents = strategyEvents.filter((eventItem) => String((eventItem?.payload || {}).symbol || '').toUpperCase() === normalized);
-                    let cumulativePnl = 0;
-                    for (const eventItem of symbolEvents) {
-                        const eventName = String(eventItem?.event || '');
-                        const eventPayload = eventItem?.payload || {};
-                        if (eventName === 'entry' || eventName === 'rebuy_after_positive_exit' || eventName === 'loss_reentry_executed') {
-                            timeline.push({
-                                timestamp: eventItem?.timestamp,
-                                side: 'buy',
-                                qty: Number(eventPayload?.qty),
-                                price: Number(eventPayload?.entry_price ?? eventPayload?.buy_price ?? eventPayload?.price),
-                                movementPnl: null,
-                                cumulativePnl,
-                            });
-                            continue;
-                        }
-                        if (eventName === 'exit') {
-                            const movementPnl = Number(eventPayload?.pnl_usd);
-                            if (!Number.isNaN(movementPnl)) {
-                                cumulativePnl += movementPnl;
-                            }
-                            timeline.push({
-                                timestamp: eventItem?.timestamp,
-                                side: 'sell',
-                                qty: Number(eventPayload?.qty),
-                                price: Number(eventPayload?.exit_price ?? eventPayload?.price),
-                                movementPnl: Number.isNaN(movementPnl) ? null : movementPnl,
-                                cumulativePnl,
-                            });
-                        }
-                    }
-                    if (timeline.length) {
-                        timelineSource = 'strategy';
-                    }
-                }
-
-                if (!timeline.length) {
-                    output.innerHTML = `<div class="analysis-summary-card"><strong>${escapeHtml(tf('Mouvements', 'Movimientos'))} · ${escapeHtml(normalized)}</strong><div style="margin-top:8px; color:#c8d2ed;">${escapeHtml(tf('Aucun mouvement trouvé.', 'Ningún movimiento encontrado.'))}</div></div>`;
-                    appendTrendFollowingLog(tf(`Mouvements ${normalized}: 0 ligne`, `Movimientos ${normalized}: 0 filas`));
-                    return;
-                }
-
-                const rowsHtml = timeline
-                    .slice()
-                    .reverse()
-                    .map((item) => `
-                        <tr>
-                            <td>${escapeHtml(formatShortTimestamp(item.timestamp || '-'))}</td>
-                            <td>${escapeHtml(item.side.toUpperCase())}</td>
-                            <td>${escapeHtml(formatMaybeNumber(item.qty))}</td>
-                            <td>${escapeHtml(formatMaybeNumber(item.price))}</td>
-                            <td>${escapeHtml(item.movementPnl === null ? '-' : formatSignedNumber(item.movementPnl, ' USD'))}</td>
-                            <td>${escapeHtml(formatSignedNumber(item.cumulativePnl, ' USD'))}</td>
-                        </tr>
-                    `)
-                    .join('');
-
-                output.innerHTML = `
-                    <div class="analysis-summary-card">
-                        <strong>${escapeHtml(tf('Mouvements sélectionnés', 'Movimientos seleccionados'))} · ${escapeHtml(normalized)}</strong>
-                        <div style="margin-top:6px; color:#9aa8cd; font-size:0.82rem;">${escapeHtml(timelineSource === 'activities' ? tf('Source: activités Alpaca', 'Fuente: actividades Alpaca') : tf('Source: événements stratégie', 'Fuente: eventos estrategia'))}</div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>${escapeHtml(tf('Horodatage', 'Fecha/hora'))}</th>
-                                    <th>Side</th>
-                                    <th>Qty</th>
-                                    <th>${escapeHtml(tf('Prix', 'Precio'))}</th>
-                                    <th>${escapeHtml(tf('P&L mouvement', 'P&L movimiento'))}</th>
-                                    <th>${escapeHtml(tf('P&L cumulé', 'P&L acumulado'))}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${rowsHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                appendTrendFollowingLog(tf(`Mouvements ${normalized}: ${timeline.length} ligne(s) chargée(s) · source=${timelineSource}`, `Movimientos ${normalized}: ${timeline.length} fila(s) cargada(s) · fuente=${timelineSource}`));
-            } catch (error) {
-                output.textContent = currentLanguage === 'es'
-                    ? `Movimientos de ${normalized} no disponibles: ${error.message}`
-                    : `Mouvements de ${normalized} indisponibles : ${error.message}`;
-                appendTrendFollowingLog(tf(`Mouvements ${normalized}: erreur ${error.message}`, `Movimientos ${normalized}: error ${error.message}`));
             }
         }
 
@@ -4211,6 +4151,8 @@
             trendFollowingStatusSnapshot = statusPayload || null;
             const running = Boolean(statusPayload?.running);
             trendFollowingIsRunning = running;
+            const tabIa = document.getElementById('tab-ia');
+            if (tabIa) tabIa.classList.toggle('tab-button-ia-running', running);
             const symbols = Array.isArray(statusPayload?.symbols) ? statusPayload.symbols.join(', ') : '-';
             const positionsCount = Object.keys(statusPayload?.positions || {}).length;
             const sellSignalHits = statusPayload?.sell_signal_hits || {};
@@ -4756,7 +4698,42 @@
             }
         }
 
+        async function resetAllPositions() {
+            const confirmed = window.confirm(
+                tf(
+                    'Confirmer RESET ? Cette action va vendre toutes les positions ouvertes.',
+                    '¿Confirmar RESET? Esta acción venderá todas las posiciones abiertas.'
+                )
+            );
+            if (!confirmed) {
+                return;
+            }
+
+            const orderStatus = document.getElementById('order-status');
+            if (orderStatus) {
+                orderStatus.textContent = tf('RESET en cours...', 'RESET en curso...');
+            }
+
+            try {
+                const payload = await fetchJson(`${apiBase}/positions/reset`, {
+                    method: 'POST',
+                });
+                const closedCount = Number(payload?.closed_count || 0);
+                if (orderStatus) {
+                    orderStatus.textContent = payload?.ok
+                        ? tf(`RESET OK · ordres de liquidation: ${closedCount}`, `RESET OK · órdenes de liquidación: ${closedCount}`)
+                        : tf(`RESET impossible: ${payload?.message || 'erreur inconnue'}`, `RESET imposible: ${payload?.message || 'error desconocido'}`);
+                }
+                await Promise.all([loadAccount(), loadPositions(), loadOrders()]);
+            } catch (error) {
+                if (orderStatus) {
+                    orderStatus.textContent = tf(`RESET impossible: ${error.message}`, `RESET imposible: ${error.message}`);
+                }
+            }
+        }
+
         document.getElementById('refresh-account').addEventListener('click', () => loadAccount().catch(console.error));
+        document.getElementById('reset-positions').addEventListener('click', () => resetAllPositions().catch(console.error));
         document.getElementById('get-quote').addEventListener('click', () => loadQuote().catch(console.error));
         document.getElementById('refresh-positions').addEventListener('click', () => loadPositions().catch(console.error));
         // --- Autocomplete recherche de ticker dans le panneau IA ---
@@ -4853,6 +4830,7 @@
         document.getElementById('tab-activities').addEventListener('click', () => {
             setActiveTab('activities');
             loadActivities().catch(console.error);
+            loadStrategyHistory().catch(console.error);
         });
         document.getElementById('antifragile-run-btn').addEventListener('click', () => {
             runAntifragileBacktest().catch(console.error);
@@ -4895,9 +4873,53 @@
         document.getElementById('tf-stop-btn').addEventListener('click', () => {
             stopTrendFollowing().catch(console.error);
         });
-        document.getElementById('refresh-activities').addEventListener('click', () => loadActivities().catch(console.error));
-        document.getElementById('purge-activities').addEventListener('click', () => purgeActivities().catch(console.error));
-        document.getElementById('reset-activities-purge').addEventListener('click', () => resetActivitiesPurge().catch(console.error));
+        const refreshActivitiesBtn = document.getElementById('refresh-activities');
+        if (refreshActivitiesBtn) {
+            refreshActivitiesBtn.addEventListener('click', () => loadActivities().catch(console.error));
+        }
+        const purgeActivitiesBtn = document.getElementById('purge-activities');
+        if (purgeActivitiesBtn) {
+            purgeActivitiesBtn.addEventListener('click', () => purgeActivities().catch(console.error));
+        }
+        const resetActivitiesPurgeBtn = document.getElementById('reset-activities-purge');
+        if (resetActivitiesPurgeBtn) {
+            resetActivitiesPurgeBtn.addEventListener('click', () => resetActivitiesPurge().catch(console.error));
+        }
+        const activitiesFilterInput = document.getElementById('activities-symbol-filter');
+        if (activitiesFilterInput) {
+            activitiesFilterInput.addEventListener('input', () => applyActivitiesSymbolFilter());
+        }
+        const activitiesClearFilterBtn = document.getElementById('activities-clear-filter');
+        if (activitiesClearFilterBtn) {
+            activitiesClearFilterBtn.addEventListener('click', () => {
+                const input = document.getElementById('activities-symbol-filter');
+                if (input) input.value = '';
+                applyActivitiesSymbolFilter();
+            });
+        }
+        document.getElementById('refresh-strategy-history').addEventListener('click', () => loadStrategyHistory().catch(console.error));
+        const clearStrategyHistoryBtn = document.getElementById('clear-strategy-history');
+        if (clearStrategyHistoryBtn) {
+            clearStrategyHistoryBtn.addEventListener('click', () => clearStrategyHistory().catch(console.error));
+        }
+        document.getElementById('export-strategy-history-csv').addEventListener('click', () => exportStrategyHistory('csv').catch(console.error));
+        document.getElementById('export-strategy-history-pdf').addEventListener('click', () => exportStrategyHistory('pdf').catch(console.error));
+        document.getElementById('strategy-history-body').addEventListener('click', (event) => {
+            const button = event?.target?.closest?.('.strategy-history-toggle');
+            if (!button) {
+                return;
+            }
+            const symbol = String(button.dataset.symbol || '').trim().toUpperCase();
+            if (!symbol) {
+                return;
+            }
+            if (strategyHistoryCollapsedSymbols.has(symbol)) {
+                strategyHistoryCollapsedSymbols.delete(symbol);
+            } else {
+                strategyHistoryCollapsedSymbols.add(symbol);
+            }
+            setStrategyHistoryGroupVisibility(symbol);
+        });
         window.addEventListener('beforeunload', () => {
             trendFollowingWsAutoReconnect = false;
             if (trendFollowingWsReconnectTimer) {
@@ -4951,7 +4973,6 @@
         document.getElementById('app-version').textContent = APP_VERSION;
         loadPersistedPositionsTotalHistory();
         loadPersistedSoldPositions();
-        loadPersistedSelectedPortfolioSymbol();
         loadPersistedV2SelectedSymbols();
         renderV2SelectionStatus();
         updateSidebarMarketClock();
@@ -4993,10 +5014,11 @@
         refreshTrendFollowingStatus().catch(console.error);
         connectTrendFollowingSocket();
 
-        Promise.all([loadAccount(), loadQuote(), loadPositions(), loadOrders(), loadActivities()]).catch((error) => {
+        Promise.all([loadAccount(), loadPositions(), loadOrders(), loadStrategyHistory()]).catch((error) => {
             const status = document.getElementById('order-status');
             status.textContent = currentLanguage === 'es' ? `Conexión API: ${error.message}` : `Connexion API: ${error.message}`;
         });
+        loadQuote().catch(console.error);
     </script>
 </body>
 

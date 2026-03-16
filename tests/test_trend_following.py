@@ -1,5 +1,6 @@
 import asyncio
 from collections import deque
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from ceibo_finance.services import trend_following as trend_following_module
@@ -208,6 +209,45 @@ def test_loss_reentry_skips_when_trend_negative() -> None:
         service._place_order.assert_not_awaited()
         assert 'INTC' not in service.state.pending_loss_reentries
         assert 'INTC' not in service.state.positions
+    finally:
+        asyncio.set_event_loop(previous_loop)
+        loop.close()
+
+
+def test_run_loop_stops_when_market_closes(monkeypatch) -> None:
+    loop = asyncio.new_event_loop()
+    previous_loop = None
+    try:
+        try:
+            previous_loop = asyncio.get_event_loop()
+        except RuntimeError:
+            previous_loop = None
+        asyncio.set_event_loop(loop)
+
+        service = TrendFollowingService()
+        service.state.running = True
+        service.state.config = TrendFollowingConfig(symbols=['AAPL'], poll_seconds=30.0)
+        service.state.price_history['AAPL'] = deque(maxlen=25)
+        service._broadcast = AsyncMock()
+        service._fetch_symbol_price = AsyncMock(return_value=100.0)
+        service._evaluate_symbol = AsyncMock()
+
+        clocks = iter([
+            {'is_open': True, 'next_open': None, 'next_close': '2026-03-16T20:00:00+00:00'},
+            {'is_open': False, 'next_open': '2026-03-17T13:30:00+00:00', 'next_close': None},
+        ])
+        monkeypatch.setattr(trend_following_module.alpaca_service, 'get_market_clock', lambda: next(clocks))
+
+        async def fast_sleep(_: float) -> None:
+            return None
+
+        monkeypatch.setattr(trend_following_module.asyncio, 'sleep', fast_sleep)
+
+        asyncio.run(service._run_loop())
+
+        assert service.state.running is False
+        assert any(event.get('event') == 'strategy_stopped_market_closed' for event in service.state.events)
+        service._broadcast.assert_awaited()
     finally:
         asyncio.set_event_loop(previous_loop)
         loop.close()

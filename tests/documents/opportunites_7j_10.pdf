@@ -1,0 +1,371 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Length 2820 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+40 800 Td
+(RESULTAT RECHERCHE IA - TOP 10 OPPORTUNITES \(7 JOURS\)) Tj
+T*
+() Tj
+T*
+(Date export: 2026-03-15 21:42:06) Tj
+T*
+(Univers scanne: 40) Tj
+T*
+(Preselection: 20) Tj
+T*
+(Providers LLM OK: openai, openrouter) Tj
+T*
+() Tj
+T*
+(CRITERES UTILISES) Tj
+T*
+(- Performance 5 jours \(momentum hebdomadaire\).) Tj
+T*
+(- Performance 1 jour \(accélération/récence\).) Tj
+T*
+(- Performance 1 mois pour réduire le bruit des seuls derniers jours.) Tj
+T*
+(- Écart du prix à la moyenne de clôture 5 jours.) Tj
+T*
+(- Volatilité journalière \(équilibre opportunité/risque\).) Tj
+T*
+(- Consensus multi-LLM \(votes et rang dans les shortlists\).) Tj
+T*
+(- Transparence: chaque ticket expose les éléments chiffrés utilisés.) Tj
+T*
+() Tj
+T*
+(TOP OPPORTUNITES) Tj
+T*
+(1. MU - Micron Technology, Inc. Common Stock) Tj
+T*
+(   Score final: 89.26 | Marche: NASDAQ) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 88.76) Tj
+T*
+(   Activite: Mémoire DRAM/NAND et stockage.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Score de marché très élevé, forte performance sur 5 jours \(5.77%\), momentum très positif \(48.10%\) et bonne performance mensuelle \(23.69%\). Volatilité élevée permettant des opportunités de trading.) Tj
+T*
+(    - Score de marché élevé et performance sur 1 mois intéressante) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 5.77%) Tj
+T*
+(    - Perf 1j: -0.6%) Tj
+T*
+(    - Perf 1 mois: 23.69%) Tj
+T*
+(    - Momentum vs moyenne 5j: 48.1%) Tj
+T*
+(    - Volatilité journalière: 4.39%) Tj
+T*
+() Tj
+T*
+(2. XOM - Exxon Mobil Corporation) Tj
+T*
+(   Score final: 79.22 | Marche: NYSE) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 78.03) Tj
+T*
+(   Activite: Pétrole, gaz et énergie.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Bon score de marché \(78.03\), performance positive sur 5 jours \(2.48%\) et momentum élevé \(30.24%\). Volatilité faible mais stable, performance mensuelle positive.) Tj
+T*
+(    - Stabilité avec une performance sur 5 jours et un momentum vs moyenne à 5 jours satisfaisants) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 2.48%) Tj
+T*
+(    - Perf 1j: 0.39%) Tj
+T*
+(    - Perf 1 mois: 4.4%) Tj
+T*
+(    - Momentum vs moyenne 5j: 30.24%) Tj
+T*
+(    - Volatilité journalière: 1.13%) Tj
+T*
+() Tj
+T*
+(3. CVX - Chevron Corporation) Tj
+T*
+(   Score final: 71.1 | Marche: NYSE) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 73.5) Tj
+T*
+(   Activite: Énergie intégrée: exploration, production et raffinage.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Score de marché solide \(73.50\), performance sur 5 jours positive \(1.70%\) avec un momentum élevé \(30.45%\). Volatilité faible mais suffisante, performance mensuelle positive.) Tj
+T*
+(    - Performance sur 1 jour et momentum vs moyenne à 5 jours positifs) Tj
+T*
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 2562 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+40 800 Td
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 1.7%) Tj
+T*
+(    - Perf 1j: 0.89%) Tj
+T*
+(    - Perf 1 mois: 0.83%) Tj
+T*
+(    - Momentum vs moyenne 5j: 30.45%) Tj
+T*
+(    - Volatilité journalière: 1.01%) Tj
+T*
+() Tj
+T*
+(4. INTC - Intel Corporation Common Stock) Tj
+T*
+(   Score final: 68.72 | Marche: NASDAQ) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 69.53) Tj
+T*
+(   Activite: Semi-conducteurs et infrastructures informatiques.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Score de marché élevé \(69.53\), bonne performance sur 5 jours \(2.56%\) et momentum positif \(25.36%\). Volatilité modérée, malgré une performance mensuelle négative récente, le momentum reste favorable.) Tj
+T*
+(    - Performance sur 1 jour et sur 5 jours solides, avec un momentum vs moyenne à 5 jours intéressant) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 2.56%) Tj
+T*
+(    - Perf 1j: 1.76%) Tj
+T*
+(    - Perf 1 mois: -8.08%) Tj
+T*
+(    - Momentum vs moyenne 5j: 25.36%) Tj
+T*
+(    - Volatilité journalière: 3.46%) Tj
+T*
+() Tj
+T*
+(5. SMH - VanEck Semiconductor ETF) Tj
+T*
+(   Score final: 54.09 | Marche: NASDAQ) Tj
+T*
+(   Votes LLM: 1 | Providers: openrouter | Score marche: 72.15) Tj
+T*
+(   Activite: ETF thématique sur les semi-conducteurs.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Volatilité journalière élevée avec une performance sur 1 mois acceptable) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 0.98%) Tj
+T*
+(    - Perf 1j: -0.29%) Tj
+T*
+(    - Perf 1 mois: 3.06%) Tj
+T*
+(    - Momentum vs moyenne 5j: 6.36%) Tj
+T*
+(    - Volatilité journalière: 1.94%) Tj
+T*
+() Tj
+T*
+(6. JNJ - Johnson & Johnson) Tj
+T*
+(   Score final: 50.69 | Marche: NYSE) Tj
+T*
+(   Votes LLM: 1 | Providers: openai | Score marche: 66.49) Tj
+T*
+(   Activite: Santé, pharma et technologies médicales.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Score de marché correct \(66.49\), momentum positif \(16.63%\) malgré une performance 5 jours légèrement négative, stabilité et faible volatilité, performance mensuelle neutre.) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: -0.19%) Tj
+T*
+(    - Perf 1j: -0.27%) Tj
+T*
+(    - Perf 1 mois: 0.01%) Tj
+T*
+(    - Momentum vs moyenne 5j: 16.63%) Tj
+T*
+(    - Volatilité journalière: 1.04%) Tj
+T*
+() Tj
+T*
+(7. NVDA - NVIDIA Corporation Common Stock) Tj
+T*
+(   Score final: 45.87 | Marche: NASDAQ) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 55.45) Tj
+T*
+(   Activite: Semi-conducteurs GPU pour IA, data centers et gaming.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 2532 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+40 800 Td
+(    - Score de marché moyen \(55.45\), performance 5 jours positive \(2.09%\), volatilité modérée \(2.03\), bien que le momentum soit légèrement négatif, la performance mensuelle reste positive.) Tj
+T*
+(    - Performance sur 5 jours et sur 1 mois intéressantes malgré un momentum vs moyenne à 5 jours négatif) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 2.09%) Tj
+T*
+(    - Perf 1j: -0.38%) Tj
+T*
+(    - Perf 1 mois: 5.97%) Tj
+T*
+(    - Momentum vs moyenne 5j: -4.65%) Tj
+T*
+(    - Volatilité journalière: 2.03%) Tj
+T*
+() Tj
+T*
+(8. XLE - State Street Energy Select Sector SPDR ETF) Tj
+T*
+(   Score final: 44.71 | Marche: ARCA) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 53.51) Tj
+T*
+(   Activite: ETF secteur énergie américain.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Score de marché moyen \(53.51\), performance 5 jours positive \(1.72%\) avec un momentum élevé \(29.55%\) et très forte volatilité \(9.23%\), ce qui peut offrir des opportunités de trading à court terme.) Tj
+T*
+(    - Volatilité journalière très élevée mais performance sur 1 mois négative) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 1.72%) Tj
+T*
+(    - Perf 1j: 0.81%) Tj
+T*
+(    - Perf 1 mois: -50.28%) Tj
+T*
+(    - Momentum vs moyenne 5j: 29.55%) Tj
+T*
+(    - Volatilité journalière: 9.23%) Tj
+T*
+() Tj
+T*
+(9. SOXX - iShares Semiconductor ETF) Tj
+T*
+(   Score final: 44.64 | Marche: NASDAQ) Tj
+T*
+(   Votes LLM: 0 | Providers: - | Score marche: 74.4) Tj
+T*
+(   Activite: ETF secteur semi-conducteurs.) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 0.36%) Tj
+T*
+(    - Perf 1j: -0.14%) Tj
+T*
+(    - Perf 1 mois: 2.67%) Tj
+T*
+(    - Momentum vs moyenne 5j: 8.33%) Tj
+T*
+(    - Volatilité journalière: 2.09%) Tj
+T*
+() Tj
+T*
+(10. UNH - UNITEDHEALTH GROUP INCORPORATED \(Delaware\)) Tj
+T*
+(   Score final: 41.61 | Marche: NYSE) Tj
+T*
+(   Votes LLM: 2 | Providers: openai, openrouter | Score marche: 45.35) Tj
+T*
+(   Activite: Assurance santé et services médicaux.) Tj
+T*
+(   Rationales IA:) Tj
+T*
+(    - Score de marché moyen \(45.35\), bonne performance sur 5 jours \(2.19%\), volatilité modérée \(1.63\), momentum négatif mais performance récente positive sur 1 jour et 1 mois.) Tj
+T*
+(    - Performance sur 1 jour et sur 5 jours solides) Tj
+T*
+(   Elements quantitatifs:) Tj
+T*
+(    - Perf 5j: 2.19%) Tj
+T*
+(    - Perf 1j: 1.03%) Tj
+T*
+(    - Perf 1 mois: 0.78%) Tj
+T*
+(    - Momentum vs moyenne 5j: -14.34%) Tj
+T*
+(    - Volatilité journalière: 1.63%) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000000154 00000 n 
+0000003026 00000 n 
+0000003152 00000 n 
+0000005766 00000 n 
+0000005892 00000 n 
+0000008476 00000 n 
+0000008602 00000 n 
+trailer
+<< /Size 10 /Root 9 0 R >>
+startxref
+8651
+%%EOF

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     quote_intel_refresh_minutes: int = 15
     quote_intel_db_path: str = 'data/quote_intel.db'
+    strategy_history_db_path: str = 'data/strategy_history.db'
 
     viewer_token_secret: str = 'dev-insecure-change-me'
     viewer_admin_key: str = ''

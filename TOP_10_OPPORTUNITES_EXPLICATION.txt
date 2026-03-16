@@ -1,0 +1,39 @@
+Top 10 opportunités (7 jours) — Ce que fait le bouton
+
+Quand vous cliquez sur "Générer liste IA" dans l’onglet IA :
+
+1) L’interface passe en mode chargement
+- Le bouton est temporairement désactivé et affiche "...".
+- Un message de statut indique que l’analyse IA est en cours.
+
+2) L’application appelle l’API backend
+- Requête HTTP : GET /api/v1/analysis/opportunities?days=7&limit=10
+- Objectif : récupérer 10 opportunités potentielles sur 7 jours.
+
+3) Le résumé global s’affiche
+- Nombre de tickets retenus.
+- Providers LLM valides (ceux qui ont répondu avec succès).
+- Taille de l’univers scanné.
+- Taille de la pré-sélection.
+
+4) Les opportunités sont détaillées
+Pour chaque ligne (ticket), l’écran montre :
+- Le rang (#1 à #10), symbole, nom, score final.
+- Le marché.
+- L’activité/résumé principal.
+- Les votes et providers IA.
+- Le score marché.
+- Les rationales IA (explications textuelles).
+- Les éléments quantitatifs utilisés (evidence).
+
+5) Action rapide vers Trading
+- Chaque ligne propose un bouton "Acheter".
+- Ce bouton envoie le symbole vers le panneau Trading pour préparer l’action.
+
+6) Gestion des erreurs
+- Si l’API échoue, un message d’erreur est affiché.
+- Le bouton est réactivé automatiquement.
+
+Important
+- Cette liste est indicative : elle aide à la décision mais ne garantit pas la performance future.
+- L’exécution réelle dépend de votre validation et de votre gestion du risque.

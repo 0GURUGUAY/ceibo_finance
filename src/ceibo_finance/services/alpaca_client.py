@@ -43,10 +43,77 @@ class AlpacaService:
             return {'configured': False, 'message': 'Alpaca credentials not configured'}
         return self.trading.get_account()
 
+    def get_market_clock(self) -> dict:
+        if not self.trading:
+            return {
+                'is_open': None,
+                'next_open': None,
+                'next_close': None,
+                'message': 'Alpaca credentials not configured',
+            }
+        try:
+            clock = self.trading.get_clock()
+            return {
+                'is_open': bool(getattr(clock, 'is_open', False)),
+                'next_open': getattr(clock, 'next_open', None),
+                'next_close': getattr(clock, 'next_close', None),
+            }
+        except Exception as exc:
+            return {
+                'is_open': None,
+                'next_open': None,
+                'next_close': None,
+                'message': str(exc),
+            }
+
     def list_positions(self):
         if not self.trading:
             return []
         return self.trading.get_all_positions()
+
+    def liquidate_all_positions(self) -> dict:
+        api_key = str(settings.alpaca_api_key or '').strip()
+        api_secret = str(settings.alpaca_api_secret or '').strip()
+        if not api_key or not api_secret:
+            return {
+                'ok': False,
+                'message': 'Alpaca credentials not configured',
+                'closed_count': 0,
+            }
+
+        base_url = (
+            'https://paper-api.alpaca.markets'
+            if settings.alpaca_paper
+            else 'https://api.alpaca.markets'
+        )
+
+        try:
+            resp = httpx.delete(
+                f'{base_url}/v2/positions',
+                params={
+                    'cancel_orders': 'true',
+                },
+                headers={
+                    'APCA-API-KEY-ID': api_key,
+                    'APCA-API-SECRET-KEY': api_secret,
+                },
+                timeout=15.0,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+            closed_count = len(payload) if isinstance(payload, list) else 0
+            return {
+                'ok': True,
+                'message': 'All positions liquidation submitted.',
+                'closed_count': closed_count,
+                'orders': payload if isinstance(payload, list) else [],
+            }
+        except Exception as exc:
+            return {
+                'ok': False,
+                'message': str(exc),
+                'closed_count': 0,
+            }
 
     def list_orders(self, status: str = 'open', limit: int = 50):
         if not self.trading:

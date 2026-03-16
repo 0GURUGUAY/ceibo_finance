@@ -18,6 +18,12 @@ def get_positions():
     return [p.model_dump() if hasattr(p, 'model_dump') else p for p in positions]
 
 
+@router.post('/reset')
+def reset_positions():
+    result = alpaca_service.liquidate_all_positions()
+    return result
+
+
 @router.get('/best-last-hour')
 def get_best_position_last_hour():
     raw_positions = alpaca_service.list_positions()

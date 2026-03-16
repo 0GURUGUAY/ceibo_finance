@@ -2,18 +2,21 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import base64
+import csv
 import hashlib
 import hmac
+import io
 import json
 import secrets
 from typing import Any, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 import pandas as pd
 from pydantic import BaseModel, Field
 
 from ceibo_finance.core.config import settings
 from ceibo_finance.services.antifragile_allocation import RankingWeights, antifragile_portfolio
+from ceibo_finance.services.strategy_history import strategy_history_service
 from ceibo_finance.services.trend_following import (
     TrendFollowingConfig,
     trend_following_service,
@@ -124,6 +127,107 @@ def _serialize_frame(frame: pd.DataFrame) -> list[dict[str, Any]]:
     return serialized.rename(columns={date_column: 'date'}).to_dict(orient='records')
 
 
+def _pdf_safe_text(value: str) -> str:
+    text = str(value or '').replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+    return text.encode('latin-1', errors='replace').decode('latin-1')
+
+
+def _build_pdf_from_lines(lines: list[str]) -> bytes:
+    page_width = 595
+    page_height = 842
+    left = 40
+    top = 800
+    line_height = 14
+    lines_per_page = 52
+    chunks = [lines[i:i + lines_per_page] for i in range(0, len(lines), lines_per_page)] or [[]]
+
+    objects: list[str] = []
+
+    def add_obj(content: str) -> int:
+        objects.append(content)
+        return len(objects)
+
+    font_id = add_obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>')
+    pages_id = add_obj('')
+    page_ids: list[int] = []
+
+    for chunk in chunks:
+        commands = ['BT', '/F1 11 Tf', f'{line_height} TL', f'{left} {top} Td']
+        for line in chunk:
+            commands.append(f'({_pdf_safe_text(line)}) Tj')
+            commands.append('T*')
+        commands.append('ET')
+        stream = '\n'.join(commands)
+        stream_bytes = stream.encode('latin-1', errors='replace')
+        content_id = add_obj(f'<< /Length {len(stream_bytes)} >>\nstream\n{stream}\nendstream')
+        page_id = add_obj(
+            f'<< /Type /Page /Parent {pages_id} 0 R '
+            f'/MediaBox [0 0 {page_width} {page_height}] '
+            f'/Resources << /Font << /F1 {font_id} 0 R >> >> '
+            f'/Contents {content_id} 0 R >>'
+        )
+        page_ids.append(page_id)
+
+    kids = ' '.join(f'{pid} 0 R' for pid in page_ids)
+    objects[pages_id - 1] = f'<< /Type /Pages /Kids [{kids}] /Count {len(page_ids)} >>'
+    catalog_id = add_obj(f'<< /Type /Catalog /Pages {pages_id} 0 R >>')
+
+    pdf_parts: list[bytes] = [b'%PDF-1.4\n%\xe2\xe3\xcf\xd3\n']
+    offsets = [0]
+
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(sum(len(part) for part in pdf_parts))
+        pdf_parts.append(f'{index} 0 obj\n{obj}\nendobj\n'.encode('latin-1', errors='replace'))
+
+    xref_start = sum(len(part) for part in pdf_parts)
+    xref_lines = [f'xref\n0 {len(objects) + 1}\n', '0000000000 65535 f \n']
+    for offset in offsets[1:]:
+        xref_lines.append(f'{offset:010d} 00000 n \n')
+
+    trailer = (
+        f'trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\n'
+        f'startxref\n{xref_start}\n%%EOF\n'
+    )
+
+    pdf_parts.append(''.join(xref_lines).encode('latin-1'))
+    pdf_parts.append(trailer.encode('latin-1'))
+    return b''.join(pdf_parts)
+
+
+def _format_strategy_history_report(records: list[dict[str, Any]], symbol: Optional[str], side: Optional[str]) -> list[str]:
+    lines = [
+        'HISTORIQUE SYSTEME - TREND FOLLOWING',
+        '',
+        f'Date export: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}',
+        f'Filtre symbol: {symbol or "-"}',
+        f'Filtre side: {side or "-"}',
+        f'Nombre de lignes: {len(records)}',
+        '',
+    ]
+
+    if not records:
+        lines.append('Aucun historique disponible.')
+        return lines
+
+    for index, row in enumerate(records, start=1):
+        lines.append(
+            f'{index}. {row.get("recorded_at") or "-"} | {str(row.get("side") or "-").upper()} '
+            f'| {row.get("symbol") or "-"} | qty={row.get("qty") or "-"} | price={row.get("price") or "-"}'
+        )
+        lines.append(
+            f'   reason={row.get("reason") or "-"} | source_event={row.get("source_event") or "-"} '
+            f'| order_id={row.get("order_id") or "-"}'
+        )
+        lines.append(
+            f'   pnl_usd={row.get("pnl_usd") if row.get("pnl_usd") is not None else "-"} '
+            f'| pnl_pct={row.get("pnl_pct") if row.get("pnl_pct") is not None else "-"} '
+            f'| simulation_mode={bool(row.get("simulation_mode"))}'
+        )
+        lines.append('')
+
+    return lines
+
+
 @router.post('/trend-following/start')
 async def trend_following_start(payload: TrendFollowingStartRequest):
     try:
@@ -157,9 +261,111 @@ async def trend_following_stop():
         raise HTTPException(status_code=500, detail=f'Strategy stop failed: {exc}') from exc
 
 
+@router.post('/trend-following/pause/{symbol}')
+async def trend_following_pause_symbol(symbol: str):
+    normalized = str(symbol or '').strip().upper()
+    if not normalized:
+        raise HTTPException(status_code=400, detail='Symbol is required')
+    return trend_following_service.pause_symbol(normalized)
+
+
+@router.post('/trend-following/resume/{symbol}')
+async def trend_following_resume_symbol(symbol: str):
+    normalized = str(symbol or '').strip().upper()
+    if not normalized:
+        raise HTTPException(status_code=400, detail='Symbol is required')
+    return trend_following_service.resume_symbol(normalized)
+
+
 @router.get('/trend-following/status')
 async def trend_following_status():
     return trend_following_service.status()
+
+
+@router.get('/trend-following/history')
+async def trend_following_history(limit: int = 200, symbol: Optional[str] = None, side: Optional[str] = None):
+    records = strategy_history_service.list_trades(limit=limit, symbol=symbol, side=side)
+    return {
+        'records': records,
+        'count': len(records),
+        'limit': max(1, min(int(limit or 200), 1000)),
+        'symbol': str(symbol or '').strip().upper() or None,
+        'side': str(side or '').strip().lower() or None,
+    }
+
+
+@router.post('/trend-following/history/clear')
+async def trend_following_history_clear():
+    return strategy_history_service.clear_trades()
+
+
+@router.get('/trend-following/history/export')
+async def trend_following_history_export(
+    format: str = 'csv',
+    limit: int = 500,
+    symbol: Optional[str] = None,
+    side: Optional[str] = None,
+):
+    normalized_symbol = str(symbol or '').strip().upper() or None
+    normalized_side = str(side or '').strip().lower() or None
+    records = strategy_history_service.list_trades(limit=limit, symbol=normalized_symbol, side=normalized_side)
+
+    export_format = str(format or 'csv').strip().lower()
+    base_name = 'trend_following_history'
+
+    if export_format == 'csv':
+        stream = io.StringIO()
+        writer = csv.writer(stream)
+        writer.writerow([
+            'recorded_at',
+            'strategy_name',
+            'source_event',
+            'side',
+            'symbol',
+            'qty',
+            'price',
+            'reason',
+            'order_id',
+            'simulation_mode',
+            'pnl_usd',
+            'pnl_pct',
+            'event_id',
+            'metadata_json',
+        ])
+        for row in records:
+            writer.writerow([
+                row.get('recorded_at'),
+                row.get('strategy_name'),
+                row.get('source_event'),
+                row.get('side'),
+                row.get('symbol'),
+                row.get('qty'),
+                row.get('price'),
+                row.get('reason'),
+                row.get('order_id'),
+                bool(row.get('simulation_mode')),
+                row.get('pnl_usd'),
+                row.get('pnl_pct'),
+                row.get('event_id'),
+                json.dumps(row.get('metadata') or {}, ensure_ascii=False),
+            ])
+        content = stream.getvalue().encode('utf-8')
+        return Response(
+            content=content,
+            media_type='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename="{base_name}.csv"'},
+        )
+
+    if export_format == 'pdf':
+        lines = _format_strategy_history_report(records=records, symbol=normalized_symbol, side=normalized_side)
+        pdf_bytes = _build_pdf_from_lines(lines)
+        return Response(
+            content=pdf_bytes,
+            media_type='application/pdf',
+            headers={'Content-Disposition': f'attachment; filename="{base_name}.pdf"'},
+        )
+
+    raise HTTPException(status_code=400, detail='format must be csv or pdf')
 
 
 @router.post('/antifragile/backtest')

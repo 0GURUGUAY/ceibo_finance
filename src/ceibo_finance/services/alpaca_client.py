@@ -184,11 +184,13 @@ class AlpacaService:
             timeframe=TimeFrame.Day,
             start=start,
             end=end,
-            limit=safe_days,
             feed=settings.alpaca_data_feed,
         )
         result = self.data.get_stock_bars(request)
         bars = result.data.get(symbol.upper(), []) if hasattr(result, 'data') else []
+        if bars:
+            bars = sorted(bars, key=lambda bar: getattr(bar, 'timestamp', datetime.min.replace(tzinfo=timezone.utc)))
+            bars = bars[-safe_days:]
 
         return [
             {

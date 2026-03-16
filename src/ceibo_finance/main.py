@@ -20,3 +20,8 @@ app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 @app.get('/')
 def index():
     return FileResponse(STATIC_DIR / 'index.html')
+
+
+@app.get('/spectator')
+def spectator_page():
+    return FileResponse(STATIC_DIR / 'spectator.html')

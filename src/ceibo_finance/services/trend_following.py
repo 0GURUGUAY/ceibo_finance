@@ -30,6 +30,8 @@ class TrendFollowingConfig:
     take_profit_pct: float = 0.5
     stop_loss_pct: float = 0.4
     stop_loss_confirmations: int = 2
+    reentry_after_loss_enabled: bool = True
+    reentry_delay_minutes: int = 30
 
 
 @dataclass
@@ -42,6 +44,8 @@ class TrendFollowingState:
     latest_price: dict[str, float] = field(default_factory=dict)
     sell_signal_hits: dict[str, dict[str, Any]] = field(default_factory=dict)
     positive_trend_partial_exit_stage: dict[str, int] = field(default_factory=dict)
+    pending_rebuys: dict[str, dict[str, Any]] = field(default_factory=dict)
+    pending_loss_reentries: dict[str, dict[str, Any]] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
     realized_margin_usd: float = 0.0
     savings_usd: float = 0.0
@@ -61,15 +65,24 @@ class TrendFollowingService:
                 return self.status()
 
             sanitized = await self._sanitize_config(config)
+            live_positions = []
+            if sanitized.use_current_positions:
+                try:
+                    live_positions = await asyncio.to_thread(alpaca_service.list_positions)
+                except Exception:
+                    live_positions = []
+
             self.state = TrendFollowingState(
                 running=True,
                 started_at=datetime.now(timezone.utc).isoformat(),
                 config=sanitized,
-                positions={},
+                positions=self._build_position_state_from_live_positions(live_positions),
                 price_history={symbol: deque(maxlen=sanitized.long_window + 5) for symbol in sanitized.symbols},
                 latest_price={},
                 sell_signal_hits={},
                 positive_trend_partial_exit_stage={},
+                pending_rebuys={},
+                pending_loss_reentries={},
                 events=[],
                 realized_margin_usd=0.0,
                 savings_usd=0.0,
@@ -118,6 +131,14 @@ class TrendFollowingService:
                     'notional_usd': round(position.qty * position.entry_price, 2),
                 }
                 for symbol, position in self.state.positions.items()
+            },
+            'pending_rebuys': {
+                symbol: self._json_safe(payload)
+                for symbol, payload in self.state.pending_rebuys.items()
+            },
+            'pending_loss_reentries': {
+                symbol: self._json_safe(payload)
+                for symbol, payload in self.state.pending_loss_reentries.items()
             },
             'sell_signal_hits': {
                 symbol: {
@@ -184,6 +205,9 @@ class TrendFollowingService:
                         )
                         continue
 
+                    await self._process_pending_rebuys()
+                    await self._process_pending_loss_reentries()
+
                 loop_duration_ms = (asyncio.get_running_loop().time() - loop_started) * 1000
                 self._append_event(
                     'loop_cycle',
@@ -210,16 +234,17 @@ class TrendFollowingService:
             return
 
         history = self.state.price_history.get(symbol) or deque()
-        if len(history) < config.long_window:
-            return
-
-        short_slice = list(history)[-config.short_window:]
-        long_slice = list(history)[-config.long_window:]
-        short_ma = sum(short_slice) / len(short_slice)
-        long_ma = sum(long_slice) / len(long_slice)
-
         position = self.state.positions.get(symbol)
         if position is None:
+            if symbol in self.state.pending_rebuys:
+                return
+            if len(history) < config.long_window:
+                return
+
+            short_slice = list(history)[-config.short_window:]
+            long_slice = list(history)[-config.long_window:]
+            short_ma = sum(short_slice) / len(short_slice)
+            long_ma = sum(long_slice) / len(long_slice)
             self.state.sell_signal_hits.pop(symbol, None)
             self.state.positive_trend_partial_exit_stage.pop(symbol, None)
             if short_ma > long_ma:
@@ -264,8 +289,19 @@ class TrendFollowingService:
         negative_reason: Optional[str] = None
         if price <= stop_loss:
             negative_reason = 'stop_loss'
-        elif short_ma < long_ma:
-            negative_reason = 'trend_reversal'
+        elif len(history) >= config.long_window:
+            short_slice = list(history)[-config.short_window:]
+            long_slice = list(history)[-config.long_window:]
+            short_ma = sum(short_slice) / len(short_slice)
+            long_ma = sum(long_slice) / len(long_slice)
+            if short_ma < long_ma:
+                negative_reason = 'trend_reversal'
+
+        if negative_reason == 'stop_loss' and len(history) < config.long_window:
+            # Stop loss must protect adopted/live positions immediately, even before MA warmup.
+            pass
+        elif negative_reason is None and len(history) < config.long_window:
+            return
 
         if negative_reason:
             required_hits, daily_trend_pct = await self._resolve_negative_sell_confirmations(symbol=symbol, current_price=price)
@@ -322,7 +358,16 @@ class TrendFollowingService:
 
         self.state.sell_signal_hits.pop(symbol, None)
 
-        if symbol in self.state.positive_trend_partial_exit_stage and short_ma >= long_ma and price > stop_loss:
+        if len(history) >= config.long_window:
+            short_slice = list(history)[-config.short_window:]
+            long_slice = list(history)[-config.long_window:]
+            short_ma = sum(short_slice) / len(short_slice)
+            long_ma = sum(long_slice) / len(long_slice)
+        else:
+            short_ma = None
+            long_ma = None
+
+        if symbol in self.state.positive_trend_partial_exit_stage and short_ma is not None and long_ma is not None and short_ma >= long_ma and price > stop_loss:
             self.state.positive_trend_partial_exit_stage.pop(symbol, None)
 
     async def _exit_position(
@@ -400,6 +445,14 @@ class TrendFollowingService:
         if allow_rebuy and not is_partial and pnl_usd > 0:
             await self._rebuy_after_positive_exit(symbol=symbol, entry_cost_usd=entry_cost_usd, price=price)
 
+        if allow_rebuy and not is_partial and pnl_usd < 0:
+            await self._schedule_reentry_after_loss(
+                symbol=symbol,
+                exited_qty=exit_qty,
+                sell_price=price,
+                reason=reason,
+            )
+
     async def _resolve_live_exit_qty(self, symbol: str, fallback_qty: float) -> float:
         try:
             positions = await asyncio.to_thread(alpaca_service.list_positions)
@@ -460,6 +513,25 @@ class TrendFollowingService:
         if not config or price <= 0:
             return
 
+        if await self._has_open_order_conflict(symbol=symbol, desired_side='buy'):
+            self.state.pending_rebuys[symbol] = {
+                'symbol': symbol,
+                'entry_cost_usd': round(entry_cost_usd, 4),
+                'reference_price': round(price, 4),
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'attempts': int((self.state.pending_rebuys.get(symbol) or {}).get('attempts') or 0),
+            }
+            self._append_event(
+                'rebuy_after_positive_exit_deferred',
+                {
+                    'symbol': symbol,
+                    'entry_cost_usd': round(entry_cost_usd, 4),
+                    'reference_price': round(price, 4),
+                    'reason': 'open_opposite_order',
+                },
+            )
+            return
+
         # Reinvest only the original entry cost — profit stays in savings
         qty = round(entry_cost_usd / price, 6)
         if qty <= 0:
@@ -493,6 +565,203 @@ class TrendFollowingService:
                     'error': str(exc),
                 },
             )
+
+    async def _process_pending_rebuys(self) -> None:
+        if not self.state.pending_rebuys:
+            return
+
+        for symbol, payload in list(self.state.pending_rebuys.items()):
+            if symbol in self.state.positions:
+                self.state.pending_rebuys.pop(symbol, None)
+                continue
+
+            if await self._has_open_order_conflict(symbol=symbol, desired_side='buy'):
+                continue
+
+            current_price = self.state.latest_price.get(symbol)
+            fallback_price = self._to_positive_float(payload.get('reference_price'))
+            price = self._to_positive_float(current_price) or fallback_price
+            entry_cost_usd = self._to_positive_float(payload.get('entry_cost_usd'))
+            if price is None or entry_cost_usd is None:
+                self.state.pending_rebuys.pop(symbol, None)
+                self._append_event(
+                    'rebuy_after_positive_exit_error',
+                    {
+                        'symbol': symbol,
+                        'error': 'pending_rebuy_missing_price_or_entry_cost',
+                    },
+                )
+                continue
+
+            self.state.pending_rebuys[symbol]['attempts'] = int(payload.get('attempts') or 0) + 1
+            await self._rebuy_after_positive_exit(symbol=symbol, entry_cost_usd=entry_cost_usd, price=price)
+            if symbol in self.state.positions:
+                self.state.pending_rebuys.pop(symbol, None)
+
+    async def _schedule_reentry_after_loss(self, symbol: str, exited_qty: float, sell_price: float, reason: str) -> None:
+        config = self.state.config
+        qty = self._to_positive_float(exited_qty)
+        price = self._to_positive_float(sell_price)
+        if not config or not config.reentry_after_loss_enabled or qty is None or price is None:
+            return
+
+        now = datetime.now(timezone.utc)
+        due_at = now.timestamp() + (max(0, int(config.reentry_delay_minutes or 30)) * 60)
+        self.state.pending_loss_reentries[symbol] = {
+            'symbol': symbol,
+            'qty': round(qty, 6),
+            'sell_price': round(price, 4),
+            'reason': str(reason or ''),
+            'scheduled_at': now.isoformat(),
+            'due_at_epoch': due_at,
+            'attempts': 0,
+            'current_price': None,
+            'trend_since_exit_pct': None,
+        }
+        self._append_event(
+            'loss_reentry_scheduled',
+            {
+                'symbol': symbol,
+                'qty': round(qty, 6),
+                'sell_price': round(price, 4),
+                'reason': str(reason or ''),
+                'due_in_minutes': int(config.reentry_delay_minutes or 30),
+            },
+        )
+
+    async def _process_pending_loss_reentries(self) -> None:
+        if not self.state.pending_loss_reentries:
+            return
+
+        now_epoch = datetime.now(timezone.utc).timestamp()
+        for symbol, payload in list(self.state.pending_loss_reentries.items()):
+            due_at_epoch = float(payload.get('due_at_epoch') or 0.0)
+
+            sell_price_for_display = self._to_positive_float(payload.get('sell_price'))
+            current_price_for_display = self._to_positive_float(self.state.latest_price.get(symbol))
+            if current_price_for_display is not None:
+                self.state.pending_loss_reentries[symbol]['current_price'] = round(current_price_for_display, 4)
+                if sell_price_for_display and sell_price_for_display > 0:
+                    trend_pct = ((current_price_for_display - sell_price_for_display) / sell_price_for_display) * 100.0
+                    self.state.pending_loss_reentries[symbol]['trend_since_exit_pct'] = round(trend_pct, 2)
+
+            if now_epoch < due_at_epoch:
+                continue
+
+            if symbol in self.state.positions:
+                self.state.pending_loss_reentries.pop(symbol, None)
+                continue
+
+            qty = self._to_positive_float(payload.get('qty'))
+            sell_price = self._to_positive_float(payload.get('sell_price'))
+            if qty is None or sell_price is None:
+                self.state.pending_loss_reentries.pop(symbol, None)
+                self._append_event(
+                    'loss_reentry_error',
+                    {
+                        'symbol': symbol,
+                        'error': 'pending_loss_reentry_missing_qty_or_sell_price',
+                    },
+                )
+                continue
+
+            current_price = self.state.latest_price.get(symbol)
+            if self._to_positive_float(current_price) is None:
+                fetched_price = await self._fetch_symbol_price(symbol)
+                if fetched_price is not None:
+                    self.state.latest_price[symbol] = float(fetched_price)
+                    current_price = float(fetched_price)
+
+            current_price_value = self._to_positive_float(current_price)
+            if current_price_value is None:
+                continue
+
+            trend_since_exit_pct = ((current_price_value - sell_price) / sell_price) * 100.0
+            if trend_since_exit_pct <= 0:
+                self.state.pending_loss_reentries.pop(symbol, None)
+                self._append_event(
+                    'loss_reentry_skipped_negative_trend',
+                    {
+                        'symbol': symbol,
+                        'qty': round(qty, 6),
+                        'sell_price': round(sell_price, 4),
+                        'current_price': round(current_price_value, 4),
+                        'trend_since_exit_pct': round(trend_since_exit_pct, 2),
+                    },
+                )
+                continue
+
+            if await self._has_open_order_conflict(symbol=symbol, desired_side='buy'):
+                self.state.pending_loss_reentries[symbol]['attempts'] = int(payload.get('attempts') or 0) + 1
+                self.state.pending_loss_reentries[symbol]['due_at_epoch'] = now_epoch + 30.0
+                self._append_event(
+                    'loss_reentry_deferred',
+                    {
+                        'symbol': symbol,
+                        'reason': 'open_opposite_order',
+                    },
+                )
+                continue
+
+            try:
+                await self._place_order(symbol=symbol, qty=qty, side='buy', reason='loss_reentry_after_delay')
+                self.state.positions[symbol] = PositionState(
+                    qty=round(qty, 6),
+                    entry_price=round(current_price_value, 6),
+                    entry_time=datetime.now(timezone.utc).isoformat(),
+                )
+                config = self.state.config
+                if config and symbol not in config.symbols:
+                    config.symbols.append(symbol)
+                self._append_event(
+                    'loss_reentry_executed',
+                    {
+                        'symbol': symbol,
+                        'qty': round(qty, 6),
+                        'sell_price': round(sell_price, 4),
+                        'buy_price': round(current_price_value, 4),
+                        'trend_since_exit_pct': round(trend_since_exit_pct, 2),
+                    },
+                )
+                self.state.pending_loss_reentries.pop(symbol, None)
+            except Exception as exc:
+                self.state.pending_loss_reentries[symbol]['attempts'] = int(payload.get('attempts') or 0) + 1
+                self.state.pending_loss_reentries[symbol]['due_at_epoch'] = now_epoch + 30.0
+                self._append_event(
+                    'loss_reentry_error',
+                    {
+                        'symbol': symbol,
+                        'qty': round(qty, 6),
+                        'error': str(exc),
+                    },
+                )
+                continue
+
+    async def _has_open_order_conflict(self, symbol: str, desired_side: str) -> bool:
+        desired = str(desired_side or '').strip().lower()
+        normalized = str(symbol or '').strip().upper()
+        if not desired or not normalized:
+            return False
+
+        try:
+            open_orders = await asyncio.to_thread(alpaca_service.list_orders, 'open', 200)
+        except Exception:
+            return False
+
+        for order in open_orders or []:
+            order_symbol = getattr(order, 'symbol', None)
+            if order_symbol is None and isinstance(order, dict):
+                order_symbol = order.get('symbol')
+            if str(order_symbol or '').strip().upper() != normalized:
+                continue
+
+            order_side = getattr(order, 'side', None)
+            if order_side is None and isinstance(order, dict):
+                order_side = order.get('side')
+            normalized_side = str(order_side or '').strip().lower()
+            if normalized_side and normalized_side != desired:
+                return True
+        return False
 
     async def _place_order(self, symbol: str, qty: float, side: str, reason: str) -> None:
         config = self.state.config
@@ -591,6 +860,8 @@ class TrendFollowingService:
         take_profit_pct = max(0.1, min(float(config.take_profit_pct or 0.5), 50.0))
         stop_loss_pct = max(0.1, min(float(config.stop_loss_pct or 0.4), 20.0))
         stop_loss_confirmations = max(1, min(int(config.stop_loss_confirmations or 2), 5))
+        reentry_after_loss_enabled = bool(config.reentry_after_loss_enabled)
+        reentry_delay_minutes = max(0, min(int(config.reentry_delay_minutes or 30), 240))
         capital_usd = max(100.0, min(float(config.capital_usd or 10000.0), 1_000_000.0))
 
         return TrendFollowingConfig(
@@ -605,6 +876,8 @@ class TrendFollowingService:
             take_profit_pct=take_profit_pct,
             stop_loss_pct=stop_loss_pct,
             stop_loss_confirmations=stop_loss_confirmations,
+            reentry_after_loss_enabled=reentry_after_loss_enabled,
+            reentry_delay_minutes=reentry_delay_minutes,
         )
 
     async def _refresh_universe_from_positions(self) -> None:
@@ -628,6 +901,7 @@ class TrendFollowingService:
 
         previous = list(config.symbols)
         config.symbols = refreshed_symbols
+        self.state.positions = self._build_position_state_from_live_positions(positions)
 
         for symbol in refreshed_symbols:
             if symbol not in self.state.price_history:
@@ -672,6 +946,46 @@ class TrendFollowingService:
         for position in self.state.positions.values():
             total += float(position.qty) * float(position.entry_price)
         return total
+
+    def _build_position_state_from_live_positions(self, positions: Optional[list[Any]]) -> dict[str, PositionState]:
+        adopted: dict[str, PositionState] = {}
+        for raw_position in positions or []:
+            symbol = getattr(raw_position, 'symbol', None)
+            if symbol is None and isinstance(raw_position, dict):
+                symbol = raw_position.get('symbol')
+            normalized = str(symbol or '').strip().upper()
+            if not normalized:
+                continue
+
+            qty_value = getattr(raw_position, 'qty', None)
+            if qty_value is None and isinstance(raw_position, dict):
+                qty_value = raw_position.get('qty')
+            qty = self._to_positive_float(qty_value)
+            if qty is None:
+                continue
+
+            entry_price_value = getattr(raw_position, 'avg_entry_price', None)
+            if entry_price_value is None and isinstance(raw_position, dict):
+                entry_price_value = raw_position.get('avg_entry_price')
+            entry_price = self._to_positive_float(entry_price_value)
+            if entry_price is None:
+                continue
+
+            entry_time_value = getattr(raw_position, 'created_at', None)
+            if entry_time_value is None and isinstance(raw_position, dict):
+                entry_time_value = raw_position.get('created_at')
+            if isinstance(entry_time_value, datetime):
+                entry_time = entry_time_value.isoformat()
+            else:
+                entry_time = str(entry_time_value or datetime.now(timezone.utc).isoformat())
+
+            adopted[normalized] = PositionState(
+                qty=round(qty, 6),
+                entry_price=float(entry_price),
+                entry_time=entry_time,
+            )
+
+        return adopted
 
     def _append_event(self, event_type: str, payload: dict[str, Any]) -> None:
         import uuid
@@ -830,6 +1144,8 @@ class TrendFollowingService:
             'take_profit_pct': config.take_profit_pct,
             'stop_loss_pct': config.stop_loss_pct,
             'stop_loss_confirmations': config.stop_loss_confirmations,
+            'reentry_after_loss_enabled': config.reentry_after_loss_enabled,
+            'reentry_delay_minutes': config.reentry_delay_minutes,
         }
 
 

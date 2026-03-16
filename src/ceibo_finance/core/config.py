@@ -27,5 +27,17 @@ class Settings(BaseSettings):
     gemini_api_key: str = ''
     gemini_model: str = 'gemini-1.5-flash'
 
+    alpha_vantage_api_key: str = ''
+    fmp_api_key: str = ''
+    quandl_api_key: str = ''
+    newsapi_api_key: str = ''
+
+    quote_intel_refresh_minutes: int = 15
+    quote_intel_db_path: str = 'data/quote_intel.db'
+
+    viewer_token_secret: str = 'dev-insecure-change-me'
+    viewer_admin_key: str = ''
+    viewer_token_default_ttl_minutes: int = 60
+
 
 settings = Settings()

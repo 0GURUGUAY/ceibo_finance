@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ceibo Spectator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0b1020;
+            color: #e6e8ef;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 18px;
+        }
+
+        .card {
+            background: #151b2f;
+            border: 1px solid #2a3558;
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .status {
+            margin-top: 8px;
+            color: #a9b5d6;
+            font-size: 0.9rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid #2a3558;
+            text-align: left;
+            padding: 8px;
+            font-size: 0.9rem;
+        }
+
+        .up {
+            color: #7ee2a0;
+            font-weight: 700;
+        }
+
+        .down {
+            color: #ff8f8f;
+            font-weight: 700;
+        }
+
+        .flat {
+            color: #f0d76a;
+            font-weight: 600;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="row" style="justify-content: space-between;">
+                <h2 style="margin: 0;">Ceibo · Spectator Live</h2>
+                <button id="reconnect-btn" type="button">Reconnecter</button>
+            </div>
+            <div id="conn-status" class="status">Initialisation...</div>
+            <div id="strategy-status" class="status">Stratégie: -</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Qty</th>
+                        <th>Entry</th>
+                        <th>Last</th>
+                        <th>Unrealized %</th>
+                    </tr>
+                </thead>
+                <tbody id="positions-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function formatNumber(value, digits = 2) {
+            const num = Number(value);
+            if (Number.isNaN(num)) {
+                return '-';
+            }
+            return num.toFixed(digits);
+        }
+
+        function formatSignedPercent(value) {
+            const num = Number(value);
+            if (Number.isNaN(num)) {
+                return '-';
+            }
+            const sign = num > 0 ? '+' : '';
+            return `${sign}${num.toFixed(2)}%`;
+        }
+
+        function percentClass(value) {
+            const num = Number(value);
+            if (Number.isNaN(num)) {
+                return 'flat';
+            }
+            return num > 0 ? 'up' : (num < 0 ? 'down' : 'flat');
+        }
+
+        function renderPositions(payload) {
+            const positions = payload?.positions || {};
+            const latest = payload?.latest_price || {};
+            const entries = Object.entries(positions);
+            const body = document.getElementById('positions-body');
+            body.innerHTML = '';
+
+            if (!entries.length) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5">Aucune position ouverte.</td>';
+                body.appendChild(row);
+                return;
+            }
+
+            entries.sort(([a], [b]) => a.localeCompare(b));
+            for (const [symbol, pos] of entries) {
+                const unrealizedPct = Number(pos?.unrealized_pct);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="mono">${symbol}</td>
+                    <td>${formatNumber(pos?.qty, 6)}</td>
+                    <td>${formatNumber(pos?.entry_price, 4)}</td>
+                    <td>${formatNumber(latest?.[symbol], 4)}</td>
+                    <td class="${percentClass(unrealizedPct)}">${formatSignedPercent(unrealizedPct)}</td>
+                `;
+                body.appendChild(row);
+            }
+        }
+
+        function renderSnapshot(payload) {
+            const conn = document.getElementById('conn-status');
+            const strategy = document.getElementById('strategy-status');
+            const running = Boolean(payload?.running);
+            const symbols = Array.isArray(payload?.symbols) ? payload.symbols.join(', ') : '-';
+            conn.textContent = 'Connecté · temps réel';
+            strategy.textContent = running
+                ? `Stratégie active · Symbols: ${symbols}`
+                : 'Stratégie arrêtée';
+            renderPositions(payload || {});
+        }
+
+        function getToken() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('t') || params.get('token') || '';
+        }
+
+        let ws = null;
+
+        function connectViewerSocket() {
+            const token = getToken();
+            const conn = document.getElementById('conn-status');
+            if (!token) {
+                conn.textContent = 'Token manquant. Ouvre ce lien avec ?t=<token>.';
+                return;
+            }
+
+            if (ws && ws.readyState <= 1) {
+                ws.close();
+            }
+
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${proto}//${window.location.host}/api/v1/strategy/ws/trend-following/viewer?token=${encodeURIComponent(token)}`;
+            conn.textContent = 'Connexion...';
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                conn.textContent = 'Connecté · en attente de snapshot...';
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data || '{}');
+                    if (data?.type === 'snapshot' || data?.type === 'tick') {
+                        renderSnapshot(data?.payload || {});
+                    }
+                } catch {
+                    conn.textContent = 'Message illisible reçu.';
+                }
+            };
+
+            ws.onclose = (event) => {
+                if (event.code === 1008) {
+                    conn.textContent = 'Accès refusé: token invalide ou expiré.';
+                    return;
+                }
+                conn.textContent = 'Déconnecté. Clique sur Reconnecter.';
+            };
+
+            ws.onerror = () => {
+                conn.textContent = 'Erreur WebSocket.';
+            };
+        }
+
+        document.getElementById('reconnect-btn').addEventListener('click', connectViewerSocket);
+        connectViewerSocket();
+    </script>
+</body>
+
+</html>

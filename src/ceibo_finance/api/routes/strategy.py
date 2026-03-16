@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 import base64
 import hashlib
 import hmac
 import json
 import secrets
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 import pandas as pd
@@ -213,7 +215,7 @@ async def trend_following_ws(websocket: WebSocket):
 async def trend_following_viewer_invite(
     payload: TrendFollowingViewerInviteRequest,
     request: Request,
-    x_viewer_admin_key: str | None = Header(default=None),
+    x_viewer_admin_key: Optional[str] = Header(default=None),
 ):
     configured_admin_key = str(settings.viewer_admin_key or '').strip()
     if configured_admin_key and x_viewer_admin_key != configured_admin_key:

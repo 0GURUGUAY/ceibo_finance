@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Positions — Ceibo Finance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 12px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        thead {
+            background: #334155;
+        }
+
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 10px 8px;
+            border-top: 1px solid #334155;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #293548;
+        }
+
+        .symbol {
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .positive {
+            color: #10b981;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        .status-open {
+            color: #f59e0b;
+        }
+
+        .status-closed {
+            color: #6b7280;
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .status-on-fill {
+            color: #8b5cf6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        .error {
+            background: #7f1d1d;
+            border: 1px solid #dc2626;
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📊 Positions en direct</h1>
+        <div id="error" class="error" style="display:none;"></div>
+        <div id="loading" class="loading">Connexion...</div>
+        <table id="table" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Symbole</th>
+                    <th>Quantité</th>
+                    <th>Prix d'entrée</th>
+                    <th>Prix actuel</th>
+                    <th>P&L</th>
+                    <th>P&L %</th>
+                    <th>Valeur marché</th>
+                    <th>État</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const token = new URLSearchParams(window.location.search).get('t');
+        const tableEl = document.getElementById('table');
+        const tbodyEl = document.getElementById('tbody');
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+
+        if (!token) {
+            errorEl.textContent = 'Token manquant. Vérifiez l\'URL.';
+            errorEl.style.display = 'block';
+            loadingEl.style.display = 'none';
+        } else {
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${proto}//${host}/api/v1/strategy/ws/trend-following/viewer?token=${encodeURIComponent(token)}`;
+
+            const ws = new WebSocket(wsUrl);
+
+            ws.addEventListener('open', () => {
+                console.log('🔗 Connecté au flux positions');
+            });
+
+            ws.addEventListener('message', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'snapshot' || data.type === 'tick') {
+                        const positions = data.positions || {};
+                        renderTable(positions);
+                    }
+                } catch (err) {
+                    console.error('Erreur parsing:', err);
+                }
+            });
+
+            ws.addEventListener('error', () => {
+                errorEl.textContent = 'Erreur de connexion WebSocket.';
+                errorEl.style.display = 'block';
+                loadingEl.style.display = 'none';
+            });
+
+            ws.addEventListener('close', () => {
+                errorEl.textContent = 'Connexion fermée. Rechargez la page.';
+                errorEl.style.display = 'block';
+                loadingEl.style.display = 'none';
+            });
+
+            function renderTable(positions) {
+                loadingEl.style.display = 'none';
+                tableEl.style.display = 'table';
+
+                tbodyEl.innerHTML = '';
+                const sortedSymbols = Object.keys(positions).sort();
+
+                sortedSymbols.forEach(symbol => {
+                    const pos = positions[symbol];
+                    const qty = parseFloat(pos.quantity || 0).toFixed(2);
+                    const entryPrice = parseFloat(pos.entry_price || 0).toFixed(2);
+                    const currentPrice = parseFloat(pos.current_price || 0).toFixed(2);
+                    const pl = parseFloat(pos.unrealized_pl || 0).toFixed(2);
+                    const plPct = parseFloat(pos.unrealized_pl_pct || 0).toFixed(2);
+                    const marketValue = parseFloat(pos.market_value || 0).toFixed(2);
+                    const status = pos.status || 'unknown';
+
+                    const plClass = parseFloat(pl) >= 0 ? 'positive' : 'negative';
+                    const statusClass = status === 'open' ? 'status-open' : status === 'on_fill' ? 'status-on-fill' : 'status-closed';
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="symbol">${symbol}</td>
+                        <td>${qty}</td>
+                        <td>${entryPrice}</td>
+                        <td>${currentPrice}</td>
+                        <td class="${plClass}">${pl}</td>
+                        <td class="${plClass}">${plPct}%</td>
+                        <td>${marketValue}</td>
+                        <td class="${statusClass}">${status}</td>
+                    `;
+                    tbodyEl.appendChild(row);
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>

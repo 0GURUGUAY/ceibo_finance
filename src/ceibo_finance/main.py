@@ -25,3 +25,8 @@ def index():
 @app.get('/spectator')
 def spectator_page():
     return FileResponse(STATIC_DIR / 'spectator.html')
+
+
+@app.get('/widget/positions')
+def positions_widget():
+    return FileResponse(STATIC_DIR / 'positions-widget.html')

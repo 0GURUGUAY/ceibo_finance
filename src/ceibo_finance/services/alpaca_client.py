@@ -13,23 +13,44 @@ from ceibo_finance.core.config import settings
 
 class AlpacaService:
     def __init__(self) -> None:
-        self.trading = TradingClient(
-            api_key=settings.alpaca_api_key,
-            secret_key=settings.alpaca_api_secret,
-            paper=settings.alpaca_paper,
-        )
-        self.data = StockHistoricalDataClient(
-            api_key=settings.alpaca_api_key,
-            secret_key=settings.alpaca_api_secret,
-        )
+        self.trading = None
+        self.data = None
+        self.enabled = False
+
+        api_key = str(settings.alpaca_api_key or '').strip()
+        api_secret = str(settings.alpaca_api_secret or '').strip()
+        if not api_key or not api_secret:
+            return
+
+        try:
+            self.trading = TradingClient(
+                api_key=api_key,
+                secret_key=api_secret,
+                paper=settings.alpaca_paper,
+            )
+            self.data = StockHistoricalDataClient(
+                api_key=api_key,
+                secret_key=api_secret,
+            )
+            self.enabled = True
+        except Exception:
+            self.trading = None
+            self.data = None
+            self.enabled = False
 
     def get_account(self):
+        if not self.trading:
+            return {'configured': False, 'message': 'Alpaca credentials not configured'}
         return self.trading.get_account()
 
     def list_positions(self):
+        if not self.trading:
+            return []
         return self.trading.get_all_positions()
 
     def list_orders(self, status: str = 'open', limit: int = 50):
+        if not self.trading:
+            return []
         parsed_status = QueryOrderStatus.OPEN if status.lower() == 'open' else QueryOrderStatus.ALL
         request = GetOrdersRequest(status=parsed_status, limit=limit)
         return self.trading.get_orders(filter=request)
@@ -61,6 +82,8 @@ class AlpacaService:
             return []
 
     def place_market_order(self, symbol: str, qty: float, side: str):
+        if not self.trading:
+            raise RuntimeError('Alpaca credentials not configured')
         order = MarketOrderRequest(
             symbol=symbol.upper(),
             qty=qty,
@@ -71,6 +94,14 @@ class AlpacaService:
 
     def latest_quote(self, symbol: str):
         normalized_symbol = symbol.upper()
+        if not self.data:
+            return {
+                normalized_symbol: {
+                    'data_feed_requested': settings.alpaca_data_feed,
+                    'data_feed_used': None,
+                    'error': 'Alpaca credentials not configured',
+                }
+            }
         primary_feed = settings.alpaca_data_feed
 
         primary_entry = self._fetch_latest_quote_trade(symbol=normalized_symbol, feed=primary_feed)
@@ -102,6 +133,8 @@ class AlpacaService:
         return {normalized_symbol: merged_entry}
 
     def history_intraday_closes(self, symbol: str, minutes: int = 60, timeframe_minutes: int = 5):
+        if not self.data:
+            return []
         safe_minutes = max(15, min(int(minutes or 60), 240))
         safe_timeframe = max(1, min(int(timeframe_minutes or 5), 30))
         end = datetime.now(timezone.utc)
@@ -175,6 +208,8 @@ class AlpacaService:
         return candidate_trade > 0 and primary_trade <= 0
 
     def history_daily_closes(self, symbol: str, days: int = 5):
+        if not self.data:
+            return []
         safe_days = max(1, min(days, 30))
         end = datetime.now(timezone.utc)
         start = end - timedelta(days=safe_days * 4)
